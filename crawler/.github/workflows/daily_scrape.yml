@@ -1,0 +1,69 @@
+name: Daily Credit Card Crawl
+
+on:
+  schedule:
+    # 9:00 AM UTC daily — adjust for your audience's timezone
+    - cron: "0 9 * * *"
+  workflow_dispatch: {}  # allows manual trigger from the Actions tab for testing
+
+jobs:
+  crawl:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run crawler pipeline
+        env:
+          LLM_PROVIDER: groq
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          # 8B keeps a full multi-provider run inside Groq's free tier —
+          # daily token limits are per model, and the 70B's runs out
+          # mid-run. Extraction quality difference is caught by validate.py.
+          CLASSIFY_MODEL: llama-3.1-8b-instant
+          EXTRACT_MODEL: llama-3.1-8b-instant
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: python -m src.pipeline
+
+      - name: Commit updated data and crawl cache
+        # Committing crawl_cache.json is what carries the "only pay LLM
+        # tokens for new/changed pages" savings across CI runs — without it
+        # every scheduled run would re-classify and re-extract everything.
+        run: |
+          git config user.name "card-crawler-bot"
+          git config user.email "actions@github.com"
+          git add data/
+          git diff --staged --quiet || git commit -m "Daily data update: $(date -u +'%Y-%m-%d')"
+          git push
+
+      - name: Upload logs as artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: crawl-logs-${{ github.run_id }}
+          path: logs/
+          retention-days: 14
+
+# Setup notes:
+#   1. Add these repo secrets (Settings -> Secrets and variables -> Actions):
+#        GROQ_API_KEY          required, free — https://console.groq.com/keys
+#        SUPABASE_URL          your Supabase project URL (the cardscope DB)
+#        SUPABASE_SERVICE_KEY  Supabase service_role key (server-side only)
+#        SLACK_WEBHOOK_URL     optional, for failure alerts
+#      (To use Gemini instead, set LLM_PROVIDER=gemini and add GEMINI_API_KEY,
+#      free at https://aistudio.google.com/apikey — but note its free tier
+#      can be capped as low as ~20 requests/day, which won't finish a run.)
+#   2. GitHub Actions is free for public repos, so with the crawl cache
+#      committed back each run, the whole daily update path costs nothing.
+#   3. Trigger a manual run anytime from the Actions tab ("Run workflow")
+#      to update on demand without waiting for the 9 AM schedule.

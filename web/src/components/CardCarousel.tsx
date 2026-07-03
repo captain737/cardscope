@@ -1,0 +1,224 @@
+import { useState, useCallback, useEffect } from 'react';
+import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
+import { ChevronLeft, ChevronRight, Shuffle, Sparkles } from 'lucide-react';
+import CardVisual from './CardVisual';
+import CardFacts from './CardFacts';
+import BubbleFilters from './BubbleFilters';
+import { buildDeck } from '../lib/ranking';
+import { useCards } from '../hooks/useCards';
+import { CreditCard } from '../types';
+
+interface CardCarouselProps {
+  watchlist: string[];
+  setWatchlist: React.Dispatch<React.SetStateAction<string[]>>;
+  filters: string[];
+  setFilters: React.Dispatch<React.SetStateAction<string[]>>;
+  ownedCards: string[];
+  matchMode: boolean;
+  onBrowseAll: () => void;
+}
+
+export default function CardCarousel({
+  watchlist, setWatchlist,
+  filters: activeFilters, setFilters: setActiveFilters,
+  ownedCards, matchMode, onBrowseAll,
+}: CardCarouselProps) {
+  const { cards: allCards } = useCards();
+  const [cards, setCards] = useState<CreditCard[]>(allCards);
+  const [ranked, setRanked] = useState(false);
+  const [complement, setComplement] = useState(false);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [nonce, setNonce] = useState(0); // bump to force a reshuffle
+  const reducedMotion = useReducedMotion();
+
+  // Rebuild the deck whenever the inputs to ranking change. Ranked decks
+  // are deterministic (best-first, stable); browse decks are shuffled.
+  useEffect(() => {
+    const result = buildDeck(allCards, activeFilters, ownedCards, matchMode);
+    setCards(result.deck);
+    setRanked(result.ranked);
+    setComplement(result.complement);
+    setCurrentIndex(0);
+  }, [allCards, activeFilters, ownedCards, matchMode, nonce]);
+
+  const nextCard = useCallback(() => {
+    setCurrentIndex((prev) => (prev + 1) % cards.length);
+  }, [cards.length]);
+
+  const prevCard = useCallback(() => {
+    setCurrentIndex((prev) => (prev - 1 + cards.length) % cards.length);
+  }, [cards.length]);
+
+  // Arrow keys browse the deck, except while typing in a field.
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return;
+      if (e.key === 'ArrowLeft') prevCard();
+      if (e.key === 'ArrowRight') nextCard();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [nextCard, prevCard]);
+
+  // Shuffle clears filters and re-draws a random browse deck.
+  const shuffleCards = useCallback(() => {
+    if (activeFilters.length) setActiveFilters([]);
+    setNonce((n) => n + 1);
+  }, [activeFilters.length, setActiveFilters]);
+
+  const cardTransition = reducedMotion
+    ? { duration: 0 }
+    : { type: "spring" as const, stiffness: 300, damping: 30, mass: 0.8 };
+
+  const activeCard = cards[currentIndex];
+  if (!activeCard) return null;
+
+  const rankLabel = complement ? 'best complement' : 'best match';
+
+  return (
+    <section className="relative w-full min-h-screen pt-20 pb-24 flex flex-col items-center overflow-hidden">
+      {/* Background ambient glow based on active card */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden flex items-center justify-center z-0">
+        <motion.div
+          key={activeCard.id}
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 0.14, scale: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: reducedMotion ? 0 : 1 }}
+          className={`w-[70vw] h-[70vw] max-w-[900px] max-h-[900px] rounded-full blur-[110px] ${activeCard.gradient}`}
+        />
+      </div>
+
+      {matchMode ? (
+        <div className="relative z-20 w-full mt-4 md:mt-6 flex flex-col items-center gap-3 px-4 text-center">
+          <div className="flex items-center gap-2 text-primary">
+            <Sparkles className="w-4 h-4" />
+            <h2 className="font-display font-semibold text-xl md:text-2xl text-ink">Your best matches</h2>
+          </div>
+          <button
+            onClick={onBrowseAll}
+            className="h-9 px-4 rounded-full bg-surface border border-border flex items-center gap-2 hover:bg-surface-raised hover:border-border-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 transition-colors text-muted hover:text-ink text-sm font-medium"
+          >
+            Browse all cards
+          </button>
+        </div>
+      ) : (
+        <>
+          <div className="relative z-20 w-full mt-4 md:mt-6">
+            <BubbleFilters activeFilters={activeFilters} onFiltersChange={setActiveFilters} />
+          </div>
+
+          <div className="relative z-20 w-full max-w-6xl mx-auto px-4 md:px-6 mt-5 flex justify-center">
+            <button
+              onClick={shuffleCards}
+              aria-label="Shuffle deck and clear filters"
+              className="h-10 px-4 rounded-full bg-surface border border-border flex items-center gap-2 hover:bg-surface-raised hover:border-border-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 transition-colors text-muted hover:text-ink"
+            >
+              <Shuffle className="w-4 h-4" />
+              <span className="text-sm font-medium">Shuffle</span>
+            </button>
+          </div>
+        </>
+      )}
+
+      {/* Carousel */}
+      <div className="relative z-10 w-full h-[360px] md:h-[440px] mt-8 md:mt-10 flex items-center justify-center perspective-[1200px]">
+        {/* Navigation Arrows */}
+        <button
+          onClick={prevCard}
+          aria-label="Previous card"
+          className="absolute left-3 md:left-[6%] z-30 p-3 rounded-full glass-panel hover:bg-surface-raised focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 transition-colors text-muted hover:text-ink"
+        >
+          <ChevronLeft className="w-6 h-6" />
+        </button>
+
+        <button
+          onClick={nextCard}
+          aria-label="Next card"
+          className="absolute right-3 md:right-[6%] z-30 p-3 rounded-full glass-panel hover:bg-surface-raised focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 transition-colors text-muted hover:text-ink"
+        >
+          <ChevronRight className="w-6 h-6" />
+        </button>
+
+        <div className="relative w-full h-full flex justify-center items-center transform-style-3d">
+          <AnimatePresence initial={false}>
+            {cards.map((card, index) => {
+              // Calculate circular offset
+              let offset = index - currentIndex;
+              const total = cards.length;
+              if (offset > Math.floor(total / 2)) offset -= total;
+              if (offset < -Math.floor(total / 2)) offset += total;
+
+              // Center card plus two on each side: five cards fill the
+              // horizontal space that used to sit empty.
+              const isVisible = Math.abs(offset) <= 2;
+              if (!isVisible) return null;
+
+              const isCenter = offset === 0;
+              const depth = Math.abs(offset);
+
+              return (
+                <motion.div
+                  key={card.id}
+                  initial={false}
+                  animate={{
+                    x: `calc(${offset * 92}% + ${offset * (window.innerWidth < 768 ? 14 : 52)}px)`,
+                    scale: isCenter ? 1 : depth === 1 ? 0.85 : 0.72,
+                    rotateY: reducedMotion ? 0 : offset * -13,
+                    z: isCenter ? 50 : depth === 1 ? 0 : -40,
+                    opacity: isCenter ? 1 : depth === 1 ? 0.45 : 0.22,
+                    filter: `blur(${isCenter ? 0 : depth === 1 ? 3 : 6}px)`,
+                  }}
+                  transition={cardTransition}
+                  className={`absolute origin-center will-change-transform ${isCenter ? 'z-20 cursor-default' : depth === 1 ? 'z-10 cursor-pointer' : 'z-0 cursor-pointer'}`}
+                  onClick={() => {
+                    if (offset < 0) prevCard();
+                    if (offset > 0) nextCard();
+                  }}
+                >
+                  <CardVisual card={card} />
+                </motion.div>
+              );
+            })}
+          </AnimatePresence>
+        </div>
+      </div>
+
+      {/* Focused card identity, announced to screen readers on change */}
+      <div aria-live="polite" className="relative z-20 mt-8 md:mt-10 px-4 text-center min-h-[5.5rem]">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={activeCard.id}
+            initial={{ opacity: 0, y: reducedMotion ? 0 : 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, transition: { duration: 0.12 } }}
+            transition={{ duration: reducedMotion ? 0 : 0.3, ease: [0.16, 1, 0.3, 1] }}
+          >
+            <p className="text-xs font-semibold uppercase tracking-wider text-primary mb-1.5">{activeCard.issuer}</p>
+            <h1 className="font-display font-semibold text-3xl md:text-4xl text-ink text-balance">
+              {activeCard.name}
+            </h1>
+            {ranked && (
+              <p className="mt-2 text-sm font-medium text-muted">
+                <span className="text-primary font-semibold">#{currentIndex + 1}</span> {rankLabel}
+              </p>
+            )}
+          </motion.div>
+        </AnimatePresence>
+      </div>
+
+      {/* Facts Section */}
+      <div className="relative z-20 w-full mt-4 md:mt-5">
+        <CardFacts card={activeCard} watchlist={watchlist} setWatchlist={setWatchlist} />
+      </div>
+
+      {/* Data provenance footnote */}
+      <p className="relative z-10 font-mono text-xs text-muted tracking-wide mt-12 px-4 text-center">
+        {ranked
+          ? `${cards.length} ${complement ? 'complementary' : 'matching'} card${cards.length === 1 ? '' : 's'} · ranked best-first`
+          : `${cards.length} of ${allCards.length} cards · data crawled daily from issuer sites`}
+      </p>
+    </section>
+  );
+}

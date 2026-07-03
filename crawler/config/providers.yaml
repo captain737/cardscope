@@ -1,0 +1,162 @@
+# providers.yaml
+#
+# Curated seed list of credit card issuers to crawl.
+# This is intentionally hand-maintained, not auto-discovered — the set of
+# major issuers changes maybe 1-2x/year and should be reviewed via PR,
+# not silently altered by a bot.
+#
+# Fields:
+#   name          - internal slug, used for storage paths
+#   display_name  - human-readable name shown on your site
+#   base_url      - root domain
+#   sitemap       - direct sitemap URL if known (preferred discovery method)
+#   sitemap_index - true if `sitemap` is actually a sitemap-of-sitemaps
+#   fallback_hub  - a "compare/browse cards" page to crawl if no sitemap exists
+#   url_include   - regex fragments that must appear in a URL to be considered
+#   url_exclude   - regex fragments that disqualify a URL immediately
+#   selectors     - optional hand-written CSS selectors for high-traffic
+#                   issuers (used before falling back to LLM extraction)
+#   enabled       - toggle without deleting config/history
+
+providers:
+  - name: chase
+    display_name: Chase
+    base_url: https://creditcards.chase.com
+    sitemap: https://creditcards.chase.com/sitemap.xml
+    sitemap_index: false
+    # Site redesign 2026: card pages moved from /cards/slug to category
+    # paths like /travel-credit-cards/united/club-infinite. Include
+    # anything "-credit-cards"-shaped and exclude the utility/tool pages
+    # that aren't product pages; classify.py's LLM pass handles the
+    # remaining category-hub-vs-single-card distinction.
+    url_include: ["-credit-cards"]
+    url_exclude: [
+      "/all-credit-cards$", "/compare-credit-cards", "/card-finder",
+      "/newest-offers-credit-cards", "/bank-referral-credit-cards",
+      "/no-foreign-transaction-fee-credit-cards$", "/0-intro-apr-credit-cards$",
+      "/mastercard-credit-cards$", "/visa-credit-cards$", "/contactless-credit-cards",
+      "/no-annual-fee-credit-cards$", "/credit-building-credit-cards$",
+      "/check-for-preapproved-offers", "/cfb-employee-offers", "/marketplace-admin",
+      "/refer-a-friend", "/sitemap$",
+    ]
+    enabled: true
+
+  - name: amex
+    display_name: American Express
+    base_url: https://www.americanexpress.com
+    # The sitemap index has 125 sub-sitemaps (none card-named) and takes
+    # minutes to walk. A one-hop crawl of the cards hub is faster; the LLM
+    # classifier sorts product pages from the rest.
+    sitemap: null
+    fallback_hub: https://www.americanexpress.com/us/credit-cards/
+    url_include: ["/credit-cards/"]
+    url_exclude: ["/compare", "/all-cards", "/support", "/benefits-guide", "/credit-cards/$"]
+    # DISABLED 2026-07: Amex's card listing is fully JS-rendered, so the
+    # static-HTML crawl finds zero product links. Needs a headless-browser
+    # discovery path (Playwright) to support — tracked as future work.
+    enabled: false
+
+  - name: capital_one
+    display_name: Capital One
+    base_url: https://www.capitalone.com
+    # Root index has 28 sub-sitemaps; the dedicated card one is far faster
+    # and cleaner (~118 card URLs, flat urlset).
+    sitemap: https://www.capitalone.com/card/sitemap.xml
+    sitemap_index: false
+    url_include: ["/credit-cards/"]
+    url_exclude: ["/compare", "/learn", "/help-center", "/credit-cards/lp/", "/credit-cards/$"]
+    enabled: true
+
+  - name: citi
+    display_name: Citi
+    base_url: https://www.citi.com
+    # 2026: root sitemap.xml 404s; robots.txt points to a dedicated
+    # cards sitemap (flat urlset, ~43 card/category URLs).
+    sitemap: https://www.citi.com/credit-cards/cards-sitemap.xml
+    sitemap_index: false
+    url_include: ["/credit-cards/"]
+    url_exclude: ["/compare", "/credit-cards/best-credit-cards", "/view-all-credit-cards"]
+    enabled: true
+
+  - name: discover
+    display_name: Discover
+    base_url: https://www.discover.com
+    # 2026: sitemap.xml 404s; robots.txt points to site-map.xml (note the
+    # hyphen), a flat urlset. Exclude the calculator/education noise it
+    # also contains; classify.py sorts the rest.
+    sitemap: https://www.discover.com/site-map.xml
+    sitemap_index: false
+    url_include: ["/credit-cards/"]
+    # Discover's sitemap is mostly feature/benefit/marketing pages, not
+    # products. Real card pages are trailing-slash directories under a
+    # category (e.g. /credit-cards/cash-back/it-card/); the noise is
+    # digital-wallet, member-benefit, reviews, paypal and .html feature
+    # pages — exclude those aggressively.
+    url_exclude:
+      - "/compare"
+      - "/features"
+      - "/credit-card-calculator"
+      - "/resources"
+      - "/card-smarts"
+      - "/digital-wallets"
+      - "/member-benefits"
+      - "/reviews"
+      - "/paypal"
+      - "-bonus"
+      - "-checks"
+      - ".html"
+    enabled: true
+
+  - name: bank_of_america
+    display_name: Bank of America
+    base_url: https://www.bankofamerica.com
+    sitemap: null
+    fallback_hub: https://www.bankofamerica.com/credit-cards/compare-credit-cards/
+    url_include: ["/credit-cards/"]
+    url_exclude: ["/compare-credit-cards", "/help"]
+    enabled: true
+
+  - name: wells_fargo
+    display_name: Wells Fargo
+    base_url: https://www.wellsfargo.com
+    sitemap: null
+    fallback_hub: https://www.wellsfargo.com/credit-cards/
+    url_include: ["/credit-cards/"]
+    url_exclude: ["/credit-cards/$", "/compare"]
+    enabled: true
+
+  - name: us_bank
+    display_name: U.S. Bank
+    base_url: https://www.usbank.com
+    # sitemap.xml is a flat urlset, NOT a sitemap index. Marking it as an
+    # index made discovery try to re-fetch every HTML page as a sub-sitemap
+    # (a runaway crawl that hangs). It's flat.
+    sitemap: https://www.usbank.com/sitemap.xml
+    sitemap_index: false
+    url_include: ["/credit-cards/"]
+    url_exclude: ["/compare", "/learn", "/financial-education", "/financialiq"]
+    enabled: true
+
+  - name: barclays
+    display_name: Barclays US
+    base_url: https://cards.barclaycardus.com
+    sitemap: null
+    fallback_hub: https://cards.barclaycardus.com/
+    # 2026: product pages live at /banking/cards/<card-name>/
+    url_include: ["/banking/cards/"]
+    url_exclude: ["/compare", "/banking/cards/$", "/help-center", "/about-us"]
+    enabled: true
+
+  - name: synchrony
+    display_name: Synchrony Bank
+    base_url: https://www.synchrony.com
+    # This IS a sitemap index (sitemapindex root), not a flat urlset.
+    sitemap: https://www.synchrony.com/sitemap.xml
+    sitemap_index: true
+    url_include: ["/credit-cards/"]
+    url_exclude: ["/compare"]
+    enabled: true
+
+# Add more issuers here following the same shape. Keep `enabled: false`
+# for ones you're testing/onboarding so they don't affect production data
+# until validated.

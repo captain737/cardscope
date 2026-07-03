@@ -1,0 +1,8 @@
+{
+  "name": "CardScope",
+  "description": "A sleek, interactive, funky credit card comparison website with an interactive carousel and glassmorphism design.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

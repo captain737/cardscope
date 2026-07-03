@@ -1,0 +1,15 @@
+.env
+__pycache__/
+*.pyc
+.venv/
+logs/
+.DS_Store
+
+# data/: commit only what re-runs and readers need — the crawl cache (what
+# keeps daily runs inside the free LLM tier across CI runs) and the current
+# published state. Raw HTML snapshots and dated history stay local: they're
+# large, and Supabase's card_history table is the durable audit trail.
+data/**
+!data/**/
+!data/*/crawl_cache.json
+!data/*/latest.json

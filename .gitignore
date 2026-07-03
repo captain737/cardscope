@@ -1,0 +1,26 @@
+# --- Dependencies / build output ---
+node_modules/
+dist/
+build/
+coverage/
+.vite/
+
+# --- Python ---
+.venv/
+venv/
+__pycache__/
+*.pyc
+
+# --- Secrets: never commit real env files (templates are kept) ---
+.env
+**/.env
+!.env.example
+!**/.env.example
+
+# --- Crawler runtime output (regenerated; Supabase is the source of truth) ---
+logs/
+data/
+
+# --- OS / editor cruft ---
+.DS_Store
+*.log
