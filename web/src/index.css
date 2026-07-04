@@ -49,3 +49,23 @@ body {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+/*
+  Compare runs a dedicated light/editorial theme, intentionally inverted
+  from the app's Midnight Gold dark shell (see Compare.tsx). Scoped here so
+  the inversion never leaks into the rest of the product. Warmth is carried
+  by the near-white/panel hue whisper and the gold accent, not by a cream
+  body. Contrast verified: ink 0.24 and muted 0.46 both clear AA (≥4.5:1)
+  on the 0.945 panel and the 0.99 body.
+*/
+.compare-light {
+  --cl-bg: oklch(0.99 0.003 80);
+  --cl-panel: oklch(0.945 0.006 75);
+  --cl-ink: oklch(0.24 0.006 60);
+  --cl-muted: oklch(0.46 0.008 65);
+  --cl-hairline: oklch(0.88 0.005 75);
+  --cl-hairline-strong: oklch(0.78 0.007 75);
+  --cl-gold: oklch(0.51 0.12 60);
+  --cl-pill: oklch(0.20 0.006 60);
+  --cl-pill-ink: oklch(0.97 0.004 80);
+}

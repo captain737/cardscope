@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
-import { ChevronLeft, ChevronRight, Shuffle, Sparkles } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Shuffle } from 'lucide-react';
 import CardVisual from './CardVisual';
 import CardFacts from './CardFacts';
 import BubbleFilters from './BubbleFilters';
@@ -77,30 +77,17 @@ export default function CardCarousel({
   const rankLabel = complement ? 'best complement' : 'best match';
 
   return (
-    <section className="relative w-full min-h-screen pt-20 pb-24 flex flex-col items-center overflow-hidden">
-      {/* Background ambient glow based on active card */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden flex items-center justify-center z-0">
-        <motion.div
-          key={activeCard.id}
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 0.14, scale: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: reducedMotion ? 0 : 1 }}
-          className={`w-[70vw] h-[70vw] max-w-[900px] max-h-[900px] rounded-full blur-[110px] ${activeCard.gradient}`}
-        />
-      </div>
-
+    <section className="compare-light relative w-full min-h-screen pt-24 pb-24 flex flex-col items-center overflow-hidden bg-[var(--cl-bg)]">
       {matchMode ? (
         <div className="relative z-20 w-full mt-4 md:mt-6 flex flex-col items-center gap-3 px-4 text-center">
-          <div className="flex items-center gap-2 text-primary">
-            <Sparkles className="w-4 h-4" />
-            <h2 className="font-display font-semibold text-xl md:text-2xl text-ink">Your best matches</h2>
+          <div className="flex items-center gap-2">
+            <h2 className="font-display font-semibold text-xl md:text-2xl text-[var(--cl-ink)]">Your best matches</h2>
           </div>
           <button
             onClick={onBrowseAll}
-            className="h-9 px-4 rounded-full bg-surface border border-border flex items-center gap-2 hover:bg-surface-raised hover:border-border-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 transition-colors text-muted hover:text-ink text-sm font-medium"
+            className="h-9 px-4 rounded-full bg-transparent border border-[var(--cl-hairline-strong)] flex items-center gap-2 hover:bg-[var(--cl-panel)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cl-ink)]/30 transition-colors text-[var(--cl-muted)] hover:text-[var(--cl-ink)] text-sm font-medium"
           >
-            Browse all cards
+            Browse all cards instead
           </button>
         </div>
       ) : (
@@ -109,11 +96,11 @@ export default function CardCarousel({
             <BubbleFilters activeFilters={activeFilters} onFiltersChange={setActiveFilters} />
           </div>
 
-          <div className="relative z-20 w-full max-w-6xl mx-auto px-4 md:px-6 mt-5 flex justify-center">
+          <div className="relative z-20 w-full max-w-6xl mx-auto px-4 md:px-6 mt-5 flex justify-end">
             <button
               onClick={shuffleCards}
               aria-label="Shuffle deck and clear filters"
-              className="h-10 px-4 rounded-full bg-surface border border-border flex items-center gap-2 hover:bg-surface-raised hover:border-border-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 transition-colors text-muted hover:text-ink"
+              className="h-10 px-4 rounded-full bg-transparent border border-[var(--cl-hairline-strong)] flex items-center gap-2 hover:bg-[var(--cl-panel)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cl-ink)]/30 transition-colors text-[var(--cl-ink)]"
             >
               <Shuffle className="w-4 h-4" />
               <span className="text-sm font-medium">Shuffle</span>
@@ -128,7 +115,7 @@ export default function CardCarousel({
         <button
           onClick={prevCard}
           aria-label="Previous card"
-          className="absolute left-3 md:left-[6%] z-30 p-3 rounded-full glass-panel hover:bg-surface-raised focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 transition-colors text-muted hover:text-ink"
+          className="absolute left-3 md:left-[6%] z-30 p-3 rounded-full bg-[var(--cl-bg)] border border-[var(--cl-hairline-strong)] shadow-sm hover:bg-[var(--cl-panel)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cl-ink)]/30 transition-colors text-[var(--cl-muted)] hover:text-[var(--cl-ink)]"
         >
           <ChevronLeft className="w-6 h-6" />
         </button>
@@ -136,7 +123,7 @@ export default function CardCarousel({
         <button
           onClick={nextCard}
           aria-label="Next card"
-          className="absolute right-3 md:right-[6%] z-30 p-3 rounded-full glass-panel hover:bg-surface-raised focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 transition-colors text-muted hover:text-ink"
+          className="absolute right-3 md:right-[6%] z-30 p-3 rounded-full bg-[var(--cl-bg)] border border-[var(--cl-hairline-strong)] shadow-sm hover:bg-[var(--cl-panel)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cl-ink)]/30 transition-colors text-[var(--cl-muted)] hover:text-[var(--cl-ink)]"
         >
           <ChevronRight className="w-6 h-6" />
         </button>
@@ -195,13 +182,13 @@ export default function CardCarousel({
             exit={{ opacity: 0, transition: { duration: 0.12 } }}
             transition={{ duration: reducedMotion ? 0 : 0.3, ease: [0.16, 1, 0.3, 1] }}
           >
-            <p className="text-xs font-semibold uppercase tracking-wider text-primary mb-1.5">{activeCard.issuer}</p>
-            <h1 className="font-display font-semibold text-3xl md:text-4xl text-ink text-balance">
+            <p className="text-xs font-semibold uppercase tracking-wider text-[var(--cl-gold)] mb-1.5">{activeCard.issuer}</p>
+            <h1 className="font-display font-semibold text-3xl md:text-4xl text-[var(--cl-ink)] text-balance">
               {activeCard.name}
             </h1>
             {ranked && (
-              <p className="mt-2 text-sm font-medium text-muted">
-                <span className="text-primary font-semibold">#{currentIndex + 1}</span> {rankLabel}
+              <p className="mt-2 text-sm font-medium text-[var(--cl-muted)]">
+                <span className="text-[var(--cl-gold)] font-semibold">#{currentIndex + 1}</span> {rankLabel}
               </p>
             )}
           </motion.div>
@@ -214,7 +201,7 @@ export default function CardCarousel({
       </div>
 
       {/* Data provenance footnote */}
-      <p className="relative z-10 font-mono text-xs text-muted tracking-wide mt-12 px-4 text-center">
+      <p className="relative z-10 font-mono text-xs text-[var(--cl-muted)] tracking-wide mt-12 px-4 text-center">
         {ranked
           ? `${cards.length} ${complement ? 'complementary' : 'matching'} card${cards.length === 1 ? '' : 's'} · ranked best-first`
           : `${cards.length} of ${allCards.length} cards · data crawled daily from issuer sites`}

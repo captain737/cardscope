@@ -20,7 +20,7 @@ export default function BubbleFilters({ activeFilters, onFiltersChange }: Bubble
       {GROUP_ORDER.map((group, gi) => (
         <div key={group} className="contents">
           {gi > 0 && (
-            <span aria-hidden="true" className="mx-1 h-4 w-px bg-border self-center hidden sm:inline-block" />
+            <span aria-hidden="true" className="mx-1 h-4 w-px bg-[var(--cl-hairline-strong)] self-center hidden sm:inline-block" />
           )}
           {FILTERS.filter(f => f.group === group).map(filter => {
             const isActive = activeFilters.includes(filter.id);
@@ -33,10 +33,10 @@ export default function BubbleFilters({ activeFilters, onFiltersChange }: Bubble
                 transition={{ duration: 0.25, delay: i * 0.015, ease: [0.16, 1, 0.3, 1] }}
                 onClick={() => handleToggle(filter.id)}
                 aria-pressed={isActive}
-                className={`px-3.5 py-1.5 text-sm font-medium rounded-full border transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 ${
+                className={`px-3.5 py-1.5 text-sm font-medium rounded-full border transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cl-ink)]/30 ${
                   isActive
-                    ? 'bg-primary text-bg border-primary'
-                    : 'bg-surface text-muted border-border hover:bg-surface-raised hover:border-border-strong hover:text-ink'
+                    ? 'bg-[var(--cl-pill)] text-[var(--cl-pill-ink)] border-[var(--cl-pill)]'
+                    : 'bg-transparent text-[var(--cl-muted)] border-[var(--cl-hairline-strong)] hover:bg-[var(--cl-panel)] hover:text-[var(--cl-ink)]'
                 }`}
               >
                 {filter.label}

@@ -38,17 +38,17 @@ export default function CardFacts({ card, watchlist, setWatchlist }: CardFactsPr
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, transition: { duration: 0.15 } }}
         transition={{ duration: reducedMotion ? 0 : 0.35, ease: [0.16, 1, 0.3, 1] }}
-        className="w-full max-w-6xl mx-auto px-4 md:px-6"
+        className="w-full max-w-[96rem] mx-auto px-4 md:px-6"
       >
         <div className="grid grid-cols-3">
           {cells.map((cell, i) => {
             const col = i % 3;
             const row = Math.floor(i / 3);
-            const lines = `${col < 2 ? 'border-r' : ''} ${row < 2 ? 'border-b' : ''} border-border`;
+            const lines = `${col < 2 ? 'border-r' : ''} ${row < 2 ? 'border-b' : ''} border-[var(--cl-hairline)]`;
 
             if (cell === 'center') {
               return (
-                <div key="center" className={`${lines} flex items-center justify-center gap-4 md:gap-8 p-3 md:p-6 min-h-[130px] md:min-h-[150px]`}>
+                <div key="center" className={`${lines} flex items-center justify-center gap-4 md:gap-8 p-5 md:p-6 min-h-[150px] md:min-h-[170px]`}>
                   <div className="flex flex-col items-center gap-2">
                     <button
                       onClick={() => {
@@ -57,11 +57,11 @@ export default function CardFacts({ card, watchlist, setWatchlist }: CardFactsPr
                         );
                       }}
                       aria-label={onWatchlist ? `Remove ${card.name} from watchlist` : `Add ${card.name} to watchlist`}
-                      className="w-11 h-11 rounded-full bg-surface border border-border text-muted hover:text-ink hover:border-border-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 transition-colors flex items-center justify-center"
+                      className="w-11 h-11 rounded-full bg-transparent border border-[var(--cl-hairline-strong)] text-[var(--cl-muted)] hover:text-[var(--cl-ink)] hover:border-[var(--cl-ink)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cl-ink)]/30 transition-colors flex items-center justify-center"
                     >
                       {onWatchlist ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
                     </button>
-                    <span className="text-[11px] font-semibold uppercase tracking-wider text-muted">
+                    <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--cl-muted)]">
                       {onWatchlist ? 'Saved' : 'Watchlist'}
                     </span>
                   </div>
@@ -72,29 +72,29 @@ export default function CardFacts({ card, watchlist, setWatchlist }: CardFactsPr
                         target="_blank"
                         rel="noopener noreferrer"
                         aria-label={`Visit ${card.name} on the issuer's site`}
-                        className="w-11 h-11 rounded-full bg-primary text-bg hover:bg-primary-deep focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 transition-colors flex items-center justify-center"
+                        className="w-11 h-11 rounded-full bg-[var(--cl-pill)] text-[var(--cl-pill-ink)] hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cl-ink)]/40 transition-opacity flex items-center justify-center"
                       >
                         <ArrowUpRight className="w-4 h-4" />
                       </a>
                     ) : (
                       <span
                         aria-hidden="true"
-                        className="w-11 h-11 rounded-full bg-primary/30 text-bg/50 flex items-center justify-center cursor-not-allowed"
+                        className="w-11 h-11 rounded-full bg-[var(--cl-pill)]/30 text-[var(--cl-pill-ink)]/50 flex items-center justify-center cursor-not-allowed"
                         title="Application link unavailable"
                       >
                         <ArrowUpRight className="w-4 h-4" />
                       </span>
                     )}
-                    <span className="text-[11px] font-semibold uppercase tracking-wider text-primary">Visit</span>
+                    <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--cl-gold)]">Visit</span>
                   </div>
                 </div>
               );
             }
 
             return (
-              <div key={cell.label} className={`${lines} flex flex-col items-center justify-center text-center gap-1.5 p-4 md:p-6 min-h-[130px] md:min-h-[150px]`}>
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-muted">{cell.label}</span>
-                <p className="text-sm md:text-base font-medium text-ink leading-snug line-clamp-3 max-w-[32ch]">{cell.value}</p>
+              <div key={cell.label} className={`${lines} flex flex-col items-center justify-center text-center gap-2 p-5 md:p-6 min-h-[150px] md:min-h-[170px]`}>
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--cl-muted)]">{cell.label}</span>
+                <p className="text-sm md:text-base font-medium text-[var(--cl-ink)] leading-relaxed max-w-[60ch] [overflow-wrap:anywhere]">{cell.value}</p>
               </div>
             );
           })}

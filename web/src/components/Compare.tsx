@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
-import { X, Search, Shuffle, Wallet, Bookmark } from 'lucide-react';
+import { X, Search, Shuffle, Wallet, Bookmark, Check, Minus, ArrowUpRight, Plus } from 'lucide-react';
 import { useCards } from '../hooks/useCards';
 import CardVisual from './CardVisual';
 import { CreditCard } from '../types';
@@ -12,6 +12,45 @@ interface CompareProps {
   setOwnedCards: React.Dispatch<React.SetStateAction<string[]>>;
 }
 
+// --- Fact parsing --------------------------------------------------------
+// The crawled facts are strings ("$95", "Variable APR 19.99%-28.99%",
+// "None"); the editorial layout wants a bare numeral for the two hero
+// stats and a clean yes/no/unknown for the parity checklist. `null` means
+// "we genuinely don't know" (issuer-site fallbacks) and renders as a dash
+// rather than a misleading check or cross.
+
+type Tri = true | false | null;
+
+function feeParts(fee: string): { value: string; unit: string | null } {
+  const m = fee.match(/\$\s*([\d,]+)/);
+  if (!m) return { value: '—', unit: null };
+  return { value: m[1], unit: '$' };
+}
+
+function aprParts(apr: string): { value: string; unit: string | null } {
+  const found = apr.match(/\d+\.?\d*%/g);
+  if (!found) return { value: '—', unit: null };
+  const high = Math.max(...found.map((n) => parseFloat(n)));
+  return { value: String(high), unit: '%' };
+}
+
+function parity(card: CreditCard): { label: string; state: Tri }[] {
+  const f = card.facts;
+  const noFee: Tri = /see issuer|not specified/i.test(f.annualFee) ? null : /\$\s*0\b/.test(f.annualFee);
+  const rewards: Tri = /see issuer/i.test(f.rewards) ? null : f.rewards.trim().length > 0;
+  const bonus: Tri = /see issuer/i.test(f.bonus) ? null : !/^(none|no\b|n\/a)/i.test(f.bonus.trim());
+  const ff = f.foreignFee.toLowerCase();
+  const noForeign: Tri = /not specified|see issuer/.test(ff)
+    ? null
+    : /none|no foreign|\b0%|\$?0\b/.test(ff);
+  return [
+    { label: 'No annual fee', state: noFee },
+    { label: 'Rewards on purchases', state: rewards },
+    { label: 'Sign-up bonus', state: bonus },
+    { label: 'No foreign transaction fee', state: noForeign },
+  ];
+}
+
 export default function Compare({ watchlist, setWatchlist, ownedCards, setOwnedCards }: CompareProps) {
   const { cards: allCards } = useCards();
   const [leftCardId, setLeftCardId] = useState<string | null>(null);
@@ -20,9 +59,10 @@ export default function Compare({ watchlist, setWatchlist, ownedCards, setOwnedC
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [activeSlot, setActiveSlot] = useState<'left' | 'right' | 'watchlist' | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const reduce = useReducedMotion();
 
-  const leftCard = allCards.find(c => c.id === leftCardId);
-  const rightCard = allCards.find(c => c.id === rightCardId);
+  const leftCard = allCards.find((c) => c.id === leftCardId);
+  const rightCard = allCards.find((c) => c.id === rightCardId);
 
   const handleDragStart = (e: React.DragEvent, cardId: string) => {
     e.dataTransfer.setData('cardId', cardId);
@@ -46,10 +86,8 @@ export default function Compare({ watchlist, setWatchlist, ownedCards, setOwnedC
   const selectCard = (cardId: string) => {
     if (activeSlot === 'left') setLeftCardId(cardId);
     if (activeSlot === 'right') setRightCardId(cardId);
-    if (activeSlot === 'watchlist') {
-      if (!watchlist.includes(cardId)) {
-        setWatchlist(prev => [...prev, cardId]);
-      }
+    if (activeSlot === 'watchlist' && !watchlist.includes(cardId)) {
+      setWatchlist((prev) => [...prev, cardId]);
     }
     setIsSearchOpen(false);
   };
@@ -58,28 +96,26 @@ export default function Compare({ watchlist, setWatchlist, ownedCards, setOwnedC
   // pool, falling back to the full deck so Shuffle always does something.
   const shuffleCards = () => {
     const pool = [...new Set([...ownedCards, ...watchlist])];
-    const source = pool.length >= 2 ? pool : allCards.map(c => c.id);
+    const source = pool.length >= 2 ? pool : allCards.map((c) => c.id);
     if (source.length < 2) return;
     const shuffled = [...source].sort(() => 0.5 - Math.random());
     setLeftCardId(shuffled[0]);
     setRightCardId(shuffled[1]);
   };
 
-  const filteredCards = allCards.filter(c => 
-    c.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    c.issuer.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredCards = allCards.filter(
+    (c) =>
+      c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      c.issuer.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
-  return (
-    <div className="min-h-screen pt-20 pb-16 flex flex-col items-center px-4 md:px-6 relative">
-      {/* Background ambient light */}
-      <div className="absolute inset-0 pointer-events-none flex justify-center items-center opacity-20">
-        <div className="w-[1000px] h-[500px] bg-primary/10 blur-[100px] rounded-full" />
-      </div>
+  const hasAny = Boolean(leftCard || rightCard);
 
-      <div className="w-full max-w-6xl relative z-10 flex flex-col items-center">
+  return (
+    <div className="compare-light min-h-screen bg-[var(--cl-bg)] pt-24 pb-24 px-4 md:px-8">
+      <div className="w-full max-w-[80rem] mx-auto">
         {/* Card rails: the user's own cards, kept separate from the watchlist */}
-        <div className="w-full mt-8 md:mt-12 mb-14 flex flex-col sm:flex-row items-start justify-center gap-6">
+        <div className="flex flex-col sm:flex-row items-start justify-center gap-6 mb-14">
           {ownedCards.length > 0 && (
             <>
               <Rail
@@ -88,12 +124,12 @@ export default function Compare({ watchlist, setWatchlist, ownedCards, setOwnedC
                 ids={ownedCards}
                 allCards={allCards}
                 onDragStart={handleDragStart}
-                onRemove={id => setOwnedCards(prev => prev.filter(x => x !== id))}
+                onRemove={(id) => setOwnedCards((prev) => prev.filter((x) => x !== id))}
               />
               <div className="self-stretch hidden sm:flex items-center">
-                <div className="w-px h-full min-h-[160px] bg-gradient-to-b from-transparent via-border-strong to-transparent" />
+                <div className="w-px h-full min-h-[150px] bg-[var(--cl-hairline)]" />
               </div>
-              <div className="w-full h-px sm:hidden bg-border" />
+              <div className="w-full h-px sm:hidden bg-[var(--cl-hairline)]" />
             </>
           )}
           <Rail
@@ -102,99 +138,117 @@ export default function Compare({ watchlist, setWatchlist, ownedCards, setOwnedC
             ids={watchlist}
             allCards={allCards}
             onDragStart={handleDragStart}
-            onRemove={id => setWatchlist(prev => prev.filter(x => x !== id))}
+            onRemove={(id) => setWatchlist((prev) => prev.filter((x) => x !== id))}
             addButton={
               <button
                 onClick={() => openSearch('watchlist')}
-                className="shrink-0 w-[96px] h-[144px] md:w-[112px] md:h-[168px] rounded-[0.6rem] md:rounded-[0.8rem] border-2 border-dashed border-border text-muted/50 hover:text-muted hover:border-border-strong transition-colors bg-surface cursor-pointer flex flex-col items-center justify-center"
+                className="shrink-0 w-[96px] h-[144px] md:w-[112px] md:h-[168px] rounded-[0.8rem] border-2 border-dashed border-[var(--cl-hairline-strong)] text-[var(--cl-muted)] hover:text-[var(--cl-ink)] hover:border-[var(--cl-ink)] transition-colors flex flex-col items-center justify-center"
               >
-                <span className="text-3xl font-light">+</span>
+                <Plus className="w-6 h-6" strokeWidth={1.5} />
                 <span className="text-xs mt-1">Add</span>
               </button>
             }
           />
         </div>
 
-        {/* 1v1 Battle Section */}
-        <div className="w-full relative flex justify-center items-stretch mt-4 min-h-[500px]">
-          <LightningDivider onShuffle={shuffleCards} live={!!(leftCard && rightCard)} />
+        {/* Section header + shuffle */}
+        <div className="flex items-end justify-between gap-4 mb-8 border-b border-[var(--cl-hairline)] pb-5">
+          <div>
+            <h1 className="font-display text-3xl md:text-4xl text-[var(--cl-ink)] leading-none">Compare</h1>
+            <p className="mt-2 text-sm text-[var(--cl-muted)]">Two cards, side by side. The details that decide it.</p>
+          </div>
+          <button
+            onClick={shuffleCards}
+            className="inline-flex items-center gap-2 rounded-full border border-[var(--cl-hairline-strong)] px-4 h-10 text-sm font-medium text-[var(--cl-ink)] hover:bg-[var(--cl-panel)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cl-ink)]/30"
+          >
+            <Shuffle className="w-4 h-4" />
+            <span className="hidden sm:inline">Shuffle</span>
+          </button>
+        </div>
 
-          <div className="w-1/2 flex justify-center items-center pr-6 md:pr-14 z-10 relative">
-            <Slot
-              side="left"
+        {/* Editorial 1v1 */}
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={`${leftCardId}::${rightCardId}`}
+            initial={reduce ? false : { opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: reduce ? 0 : 0.25, ease: [0.16, 1, 0.3, 1] }}
+            className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8 items-start"
+          >
+            <CompareColumn
               card={leftCard}
+              featured
               onDrop={(e) => handleDrop(e, 'left')}
               onOpenSearch={() => openSearch('left')}
               onRemove={() => setLeftCardId(null)}
             />
-          </div>
-
-          <div className="w-1/2 flex justify-center items-center pl-6 md:pl-14 z-10 relative">
-            <Slot
-              side="right"
+            <CompareColumn
               card={rightCard}
               onDrop={(e) => handleDrop(e, 'right')}
               onOpenSearch={() => openSearch('right')}
               onRemove={() => setRightCardId(null)}
             />
-          </div>
-        </div>
+          </motion.div>
+        </AnimatePresence>
 
-        {/* Compare Stats below slots if both are present */}
-        {(leftCard || rightCard) && (
-          <div className="w-full mt-16 max-w-4xl mx-auto flex flex-col gap-6">
-            <CompareRow label="Annual Fee" left={leftCard?.facts.annualFee} right={rightCard?.facts.annualFee} />
-            <CompareRow label="Rewards" left={leftCard?.facts.rewards} right={rightCard?.facts.rewards} />
-            <CompareRow label="Sign-up Bonus" left={leftCard?.facts.bonus} right={rightCard?.facts.bonus} />
-            <CompareRow label="Top Perk" left={leftCard?.facts.topPerk} right={rightCard?.facts.topPerk} />
-          </div>
+        {!hasAny && (
+          <p className="mt-8 text-center text-sm text-[var(--cl-muted)]">
+            Pick a card for each side, or hit Shuffle to draw a random matchup.
+          </p>
         )}
       </div>
 
       {/* Search Modal */}
       <AnimatePresence>
         {isSearchOpen && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[var(--cl-ink)]/25 backdrop-blur-sm"
+            onClick={() => setIsSearchOpen(false)}
           >
-            <motion.div 
-              initial={{ scale: 0.95, opacity: 0 }}
+            <motion.div
+              initial={{ scale: 0.97, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              className="w-full max-w-xl bg-surface/95 backdrop-blur-xl border border-border rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[70vh]"
+              exit={{ scale: 0.97, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-xl bg-[var(--cl-bg)] border border-[var(--cl-hairline)] rounded-2xl shadow-[0_24px_60px_-20px_rgba(0,0,0,0.35)] overflow-hidden flex flex-col max-h-[70vh]"
             >
-              <div className="p-4 border-b border-border flex items-center gap-3">
-                <Search className="w-5 h-5 text-muted" />
+              <div className="p-4 border-b border-[var(--cl-hairline)] flex items-center gap-3">
+                <Search className="w-5 h-5 text-[var(--cl-muted)]" />
                 <input
                   type="text"
                   placeholder="Search for a card..."
                   value={searchQuery}
-                  onChange={e => setSearchQuery(e.target.value)}
-                  className="bg-transparent border-none outline-none flex-1 text-ink placeholder-muted text-lg"
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="bg-transparent border-none outline-none flex-1 text-[var(--cl-ink)] placeholder-[var(--cl-muted)] text-lg"
                   autoFocus
                 />
-                <button onClick={() => setIsSearchOpen(false)} className="text-muted hover:text-ink p-2">
+                <button
+                  onClick={() => setIsSearchOpen(false)}
+                  className="text-[var(--cl-muted)] hover:text-[var(--cl-ink)] p-2"
+                >
                   <X className="w-5 h-5" />
                 </button>
               </div>
               <div className="overflow-y-auto p-2">
-                {filteredCards.length > 0 ? filteredCards.map(c => (
-                  <button
-                    key={c.id}
-                    onClick={() => selectCard(c.id)}
-                    className="w-full text-left p-4 hover:bg-surface-raised rounded-xl flex items-center gap-4 transition-colors"
-                  >
-                    <div className={`w-12 h-12 rounded-lg ${c.gradient} shadow-inner shrink-0`} />
-                    <div>
-                      <div className="text-ink font-medium text-lg">{c.name}</div>
-                      <div className="text-muted text-sm uppercase tracking-wider">{c.issuer}</div>
-                    </div>
-                  </button>
-                )) : (
-                  <div className="p-12 text-center text-muted">No cards found matching your search.</div>
+                {filteredCards.length > 0 ? (
+                  filteredCards.map((c) => (
+                    <button
+                      key={c.id}
+                      onClick={() => selectCard(c.id)}
+                      className="w-full text-left p-4 hover:bg-[var(--cl-panel)] rounded-xl flex items-center gap-4 transition-colors"
+                    >
+                      <div className={`w-12 h-12 rounded-lg ${c.gradient} shadow-inner shrink-0`} />
+                      <div className="min-w-0">
+                        <div className="text-[var(--cl-ink)] font-medium text-lg truncate">{c.name}</div>
+                        <div className="text-[var(--cl-muted)] text-sm uppercase tracking-wider">{c.issuer}</div>
+                      </div>
+                    </button>
+                  ))
+                ) : (
+                  <div className="p-12 text-center text-[var(--cl-muted)]">No cards found matching your search.</div>
                 )}
               </div>
             </motion.div>
@@ -205,65 +259,186 @@ export default function Compare({ watchlist, setWatchlist, ownedCards, setOwnedC
   );
 }
 
-function Slot({ card, onDrop, onOpenSearch, onRemove }: { card?: CreditCard, side: 'left' | 'right', onDrop: (e: React.DragEvent) => void, onOpenSearch: () => void, onRemove: () => void }) {
+// --- Comparison column ---------------------------------------------------
+
+function CompareColumn({
+  card,
+  featured = false,
+  onDrop,
+  onOpenSearch,
+  onRemove,
+}: {
+  card?: CreditCard;
+  featured?: boolean;
+  onDrop: (e: React.DragEvent) => void;
+  onOpenSearch: () => void;
+  onRemove: () => void;
+}) {
+  if (!card) {
+    return (
+      <button
+        onClick={onOpenSearch}
+        onDragOver={(e) => e.preventDefault()}
+        onDrop={onDrop}
+        className={`w-full min-h-[460px] rounded-[2rem] border-2 border-dashed border-[var(--cl-hairline-strong)] flex flex-col items-center justify-center gap-3 text-[var(--cl-muted)] hover:text-[var(--cl-ink)] hover:border-[var(--cl-ink)]/50 transition-colors ${
+          featured ? 'bg-[var(--cl-panel)]/50' : ''
+        }`}
+      >
+        <Plus className="w-8 h-8" strokeWidth={1.25} />
+        <span className="font-medium text-[var(--cl-ink)]">Select a card</span>
+        <span className="text-sm">or drag one from above</span>
+      </button>
+    );
+  }
+
+  const fee = feeParts(card.facts.annualFee);
+  const apr = aprParts(card.facts.apr);
+  const rows = parity(card);
+
   return (
     <div
       onDragOver={(e) => e.preventDefault()}
       onDrop={onDrop}
-      className="relative w-[280px] h-[420px] shrink-0"
+      className={`relative rounded-[2rem] px-6 py-8 md:px-10 md:py-11 ${
+        featured ? 'bg-[var(--cl-panel)] shadow-[0_20px_50px_-30px_rgba(0,0,0,0.35)]' : ''
+      }`}
     >
-      {/* Fighter spotlight */}
-      {card && (
-        <div aria-hidden="true" className="absolute -inset-8 -z-0 pointer-events-none rounded-full bg-primary/10 blur-3xl" />
-      )}
-      {card ? (
-        <div className="w-full h-full relative group z-10">
-          <div className="absolute top-0 left-0 w-[280px] h-[420px] pointer-events-none transform origin-center transition-transform group-hover:scale-105">
-            <CardVisual card={card} />
-          </div>
-          <div className="absolute top-full left-0 right-0 mt-4 text-center px-2">
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-primary">{card.issuer}</p>
-            <p className="font-display font-semibold text-ink text-lg leading-tight text-balance">{card.name}</p>
-          </div>
-          <button
-            onClick={onRemove}
-            aria-label={`Remove ${card.name}`}
-            className="absolute -top-4 -right-4 bg-surface-raised text-muted hover:text-ink p-2.5 rounded-full border border-border shadow-xl opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity z-30"
+      {/* Masthead: identity + controls + product shot */}
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--cl-muted)]">{card.issuer}</p>
+          <h2
+            className={`mt-2 font-display text-[var(--cl-ink)] leading-[1.05] text-balance ${
+              featured ? 'text-[2.2rem] md:text-[2.75rem]' : 'text-3xl md:text-[2.25rem] font-medium'
+            }`}
           >
-            <X className="w-5 h-5" />
-          </button>
+            {card.name}
+          </h2>
+          {featured && <div className="mt-4 h-[3px] w-12 rounded-full bg-[var(--cl-gold)]" />}
         </div>
-      ) : (
-        <button
-          onClick={onOpenSearch}
-          className="w-full h-full rounded-[1.5rem] md:rounded-[2rem] border-2 border-dashed border-border text-muted/50 hover:text-muted hover:border-border-strong transition-colors bg-surface flex flex-col items-center justify-center"
-        >
-          <span className="text-5xl font-light mb-4">+</span>
-          <span className="font-medium">Select Card</span>
-          <span className="text-sm opacity-50 mt-2">or drag from Watchlist</span>
-        </button>
-      )}
+
+        <div className="flex flex-col items-end gap-3 shrink-0">
+          <div className="flex items-center">
+            <button
+              onClick={onOpenSearch}
+              className="text-[11px] font-semibold uppercase tracking-wider text-[var(--cl-muted)] hover:text-[var(--cl-ink)] px-2 py-1 transition-colors"
+            >
+              Change
+            </button>
+            <button
+              onClick={onRemove}
+              aria-label={`Remove ${card.name}`}
+              className="p-1.5 rounded-full text-[var(--cl-muted)] hover:text-[var(--cl-ink)] hover:bg-[var(--cl-hairline)]/60 transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+          <div className="relative w-[92px] h-[138px] hidden sm:block">
+            <div className="absolute top-0 left-0 origin-top-left scale-[0.33] pointer-events-none">
+              <CardVisual card={card} />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Hero stats */}
+      <div className="mt-8 border-y border-[var(--cl-hairline)] divide-y divide-[var(--cl-hairline)]">
+        <StatBig value={fee.value} unit={fee.unit} label="Annual Fee" />
+        <StatBig value={apr.value} unit={apr.unit} label="APR" />
+      </div>
+
+      {/* At-a-glance parity */}
+      <ul className="mt-7 space-y-3.5">
+        {rows.map((r) => (
+          <li key={r.label} className="flex items-center gap-3">
+            <ParityIcon state={r.state} />
+            <span className={`text-[15px] ${r.state === false ? 'text-[var(--cl-muted)]' : 'text-[var(--cl-ink)]'}`}>
+              {r.label}
+            </span>
+          </li>
+        ))}
+      </ul>
+
+      {/* Detail spec list */}
+      <dl className="mt-8 border-t border-[var(--cl-hairline)]">
+        <SpecRow label="Rewards" value={card.facts.rewards} />
+        <SpecRow label="Sign-up bonus" value={card.facts.bonus} />
+        <SpecRow label="APR" value={card.facts.apr} />
+        <SpecRow label="Foreign fee" value={card.facts.foreignFee} />
+        <SpecRow label="Best for" value={card.facts.bestFor} />
+        <SpecRow label="Credit needed" value={card.facts.creditNeeded} />
+      </dl>
+
+      {/* CTA */}
+      <div className="mt-9">
+        {card.applyUrl ? (
+          featured ? (
+            <a
+              href={card.applyUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 rounded-full bg-[var(--cl-pill)] text-[var(--cl-pill-ink)] px-6 py-3 text-[12px] font-semibold uppercase tracking-[0.12em] hover:opacity-90 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cl-ink)]/40 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--cl-panel)]"
+            >
+              Visit site <ArrowUpRight className="w-4 h-4" />
+            </a>
+          ) : (
+            <a
+              href={card.applyUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 pb-0.5 border-b border-[var(--cl-ink)]/30 text-[12px] font-semibold uppercase tracking-[0.12em] text-[var(--cl-ink)] hover:border-[var(--cl-gold)] hover:text-[var(--cl-gold)] transition-colors"
+            >
+              Visit site <ArrowUpRight className="w-4 h-4" />
+            </a>
+          )
+        ) : (
+          <span className="text-[11px] uppercase tracking-wider text-[var(--cl-muted)]">Link unavailable</span>
+        )}
+      </div>
     </div>
   );
 }
 
-function CompareRow({ label, left, right }: { label: string, left?: string, right?: string }) {
+function StatBig({ value, unit, label }: { value: string; unit: string | null; label: string }) {
   return (
-    <div className="w-full grid grid-cols-[1fr_auto_1fr] items-center gap-4 bg-surface border border-border rounded-lg p-6">
-      <div className="text-right text-ink font-medium">
-        {left || <span className="text-muted/50">-</span>}
-      </div>
-      <div className="px-6 py-1 rounded-full bg-bg border border-border text-[11px] font-semibold uppercase tracking-wider text-muted whitespace-nowrap">
-        {label}
-      </div>
-      <div className="text-left text-ink font-medium">
-        {right || <span className="text-muted/50">-</span>}
-      </div>
+    <div className="flex items-center justify-between gap-4 py-6">
+      <span className="font-mono text-5xl md:text-[3.5rem] leading-none tracking-tight text-[var(--cl-ink)] tabular-nums">
+        {value}
+        {unit && <sup className="text-[0.4em] font-medium ml-1 top-[-0.8em]">{unit}</sup>}
+      </span>
+      <span className="text-sm text-[var(--cl-muted)] whitespace-nowrap">{label}</span>
     </div>
   );
 }
 
-function Rail({ label, icon, ids, allCards, onDragStart, onRemove, addButton }: {
+function ParityIcon({ state }: { state: Tri }) {
+  if (state === true) return <Check className="w-[18px] h-[18px] shrink-0 text-[var(--cl-ink)]" strokeWidth={2.5} />;
+  if (state === false) return <X className="w-[18px] h-[18px] shrink-0 text-[var(--cl-muted)]" strokeWidth={2.5} />;
+  return <Minus className="w-[18px] h-[18px] shrink-0 text-[var(--cl-hairline-strong)]" strokeWidth={2.5} />;
+}
+
+function SpecRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex justify-between gap-6 py-3.5 border-b border-[var(--cl-hairline)] last:border-b-0">
+      <dt className="shrink-0 pt-0.5 text-[13px] text-[var(--cl-muted)]">{label}</dt>
+      <dd className="max-w-[62%] text-right text-[14px] leading-relaxed text-[var(--cl-ink)] [overflow-wrap:anywhere]">
+        {value}
+      </dd>
+    </div>
+  );
+}
+
+// --- Card rail -----------------------------------------------------------
+
+function Rail({
+  label,
+  icon,
+  ids,
+  allCards,
+  onDragStart,
+  onRemove,
+  addButton,
+}: {
   label: string;
   icon: React.ReactNode;
   ids: string[];
@@ -274,12 +449,12 @@ function Rail({ label, icon, ids, allCards, onDragStart, onRemove, addButton }: 
 }) {
   return (
     <div className="flex flex-col items-center gap-3 min-w-0">
-      <span className="text-[11px] font-semibold uppercase tracking-wider text-muted flex items-center gap-1.5">
-        <span className="text-primary">{icon}</span> {label}
+      <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--cl-muted)] flex items-center gap-1.5">
+        <span className="text-[var(--cl-gold)]">{icon}</span> {label}
       </span>
       <div className="flex gap-4 overflow-x-auto pb-2 hide-scrollbar max-w-full">
-        {ids.map(id => {
-          const card = allCards.find(c => c.id === id);
+        {ids.map((id) => {
+          const card = allCards.find((c) => c.id === id);
           if (!card) return null;
           return (
             <div
@@ -294,7 +469,7 @@ function Rail({ label, icon, ids, allCards, onDragStart, onRemove, addButton }: 
               <button
                 onClick={() => onRemove(id)}
                 aria-label={`Remove ${card.name}`}
-                className="absolute -top-2 -right-2 bg-surface-raised text-muted hover:text-ink p-1.5 rounded-full border border-border shadow-lg opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity z-30"
+                className="absolute -top-2 -right-2 bg-[var(--cl-bg)] text-[var(--cl-muted)] hover:text-[var(--cl-ink)] p-1.5 rounded-full border border-[var(--cl-hairline-strong)] shadow-sm opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity z-30"
               >
                 <X className="w-3 h-3" />
               </button>
@@ -303,41 +478,6 @@ function Rail({ label, icon, ids, allCards, onDragStart, onRemove, addButton }: 
         })}
         {addButton}
       </div>
-    </div>
-  );
-}
-
-// Vertical lightning bolt down the arena centre; the shuffle "clash" node
-// sits at its midpoint. Glows brighter once both fighters are in.
-function LightningDivider({ onShuffle, live }: { onShuffle: () => void; live: boolean }) {
-  const reduce = useReducedMotion();
-  return (
-    <div className="absolute left-1/2 top-0 bottom-0 -translate-x-1/2 w-24 z-0 flex justify-center pointer-events-none">
-      <motion.svg
-        viewBox="0 0 40 400"
-        preserveAspectRatio="none"
-        className="h-full w-full"
-        aria-hidden="true"
-        animate={reduce ? {} : { opacity: live ? [0.55, 1, 0.7] : [0.35, 0.55, 0.4] }}
-        transition={reduce ? {} : { duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
-      >
-        <path
-          d="M20 0 L11 92 L27 150 L9 236 L25 300 L15 400"
-          fill="none"
-          stroke="var(--color-primary)"
-          strokeWidth={live ? 3 : 2}
-          strokeLinejoin="round"
-          strokeLinecap="round"
-          style={{ filter: `drop-shadow(0 0 ${live ? 8 : 4}px var(--color-primary))` }}
-        />
-      </motion.svg>
-      <button
-        onClick={onShuffle}
-        aria-label="Shuffle a random 1v1 matchup"
-        className="pointer-events-auto absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 rounded-full bg-bg border border-border-strong shadow-[0_0_24px_-4px_var(--color-primary)] hover:bg-surface hover:shadow-[0_0_32px_0_var(--color-primary)] transition-all text-primary flex items-center justify-center group z-10"
-      >
-        <Shuffle className="w-6 h-6 transition-transform group-hover:rotate-180 duration-500" />
-      </button>
     </div>
   );
 }
