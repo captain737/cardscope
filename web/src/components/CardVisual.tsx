@@ -11,7 +11,7 @@ interface CardVisualProps {
 // sideways garbage — so if the URL smells like one of those, skip it and
 // render the gradient face instead. Mirrors the crawler's blocklist
 // (credit-card-crawler/src/fetch.py) as a client-side safety net.
-const BAD_ART = /(banner|array|logo|hero|device|sphere|apple|google-?pay|paypal|wallet|icon|angled?|photo-|-photo|lifestyle|background)/i;
+const BAD_ART = /(banner|array|logo|hero|device|sphere|apple|google-?pay|paypal|wallet|icon|angled?|photo-|-photo|lifestyle|background|masthead|offer|choose|family|mobile)/i;
 
 function isLikelyCardArt(url?: string): boolean {
   return Boolean(url) && !BAD_ART.test(url!);
@@ -32,6 +32,15 @@ export default function CardVisual({ card }: CardVisualProps) {
           alt={`${card.name} card art`}
           loading="lazy"
           onError={() => setArtFailed(true)}
+          onLoad={(e) => {
+            // Flat card art is landscape at ~card proportions (1.586:1, so
+            // roughly 1.3–1.75). Portrait/square images and wider ones —
+            // 1200x630 og:image social banners (1.90), mastheads, offers,
+            // store logos, multi-card arrays — garble when rotated into the
+            // portrait slot, so drop those to the gradient face instead.
+            const { naturalWidth: w, naturalHeight: h } = e.currentTarget;
+            if (w && h && (w <= h || w / h < 1.3 || w / h > 1.8)) setArtFailed(true);
+          }}
           className="rotate-90 w-[360px] h-[240px] md:w-[420px] md:h-[280px] max-w-none object-contain drop-shadow-[0_16px_40px_rgba(0,0,0,0.55)]"
         />
       </div>

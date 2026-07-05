@@ -69,7 +69,7 @@ _IMAGE_BLOCKLIST = (
     "apple", "google-pay", "googlepay", "paypal", "wallet", "icon",
     "angle", "angled", "photo-", "-photo", "lifestyle", "background",
     "loader", "pixel", "tracking", "spacer", "transparent", "article",
-    "midnav",
+    "midnav", "masthead", "choose", "offer", "-family",
 )
 
 
@@ -136,7 +136,9 @@ def _is_card_sized(src: str) -> bool:
     for width, height in dims:
         w, h = int(width), int(height)
         longest, shortest = max(w, h), min(w, h)
-        if longest >= 300 and 1.35 <= longest / shortest <= 1.95:
+        # Real flat card art is ~1.586:1; 1200x630 og:image banners (1.90)
+        # and wider promos are not, so cap the ratio below them.
+        if longest >= 300 and 1.3 <= longest / shortest <= 1.8:
             return True
     return False
 
