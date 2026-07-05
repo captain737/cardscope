@@ -15,12 +15,21 @@
 //    "1% cash back on all other purchases"]
 
 // A reward *rate* token — the thing that marks the start of a new earn tier.
-const RATE = String.raw`\d+(?:\.\d+)?%|\d+x\b|\d+\s+(?:points?|miles?|avios|thankyou|cash\b)`;
+// Handles decimals across all forms ("1.5%", "1.5 points", "2.5x").
+const RATE = String.raw`\d+(?:\.\d+)?%|\d+(?:\.\d+)?x\b|\d+(?:\.\d+)?\s+(?:points?|miles?|avios|thankyou|cash\b)`;
 
-// A tier boundary: a comma / "and" separator immediately before a rate token.
-// Splitting here keeps mid-tier lists (", dining, and grocery purchases")
-// intact while breaking between distinct rates ("…, and 1% cash back …").
-const BOUNDARY = new RegExp(String.raw`(?:,\s+and\s+|,\s+|\s+and\s+)(?=${RATE})`, 'i');
+// Qualifier words issuers slip between the connector and the rate, e.g.
+// "and unlimited 1.5 points", "plus a 5% bonus".
+const QUALIFIER = String.raw`(?:unlimited\s+|an?\s+)?`;
+
+// A tier boundary: a connector (comma / "and" / "plus" / "with") immediately
+// before a (optionally qualified) rate token. Splitting here keeps mid-tier
+// lists (", dining, and grocery purchases") intact while breaking between
+// distinct rates ("…, and 1% cash back …", "…plus earn 2%…").
+const BOUNDARY = new RegExp(
+  String.raw`(?:,\s+and\s+|,\s+|\s+and\s+|\s+plus\s+(?:earn\s+)?|\s+with\s+)(?=${QUALIFIER}(?:${RATE}))`,
+  'i',
+);
 
 const NO_DATA = /see issuer|not specified|^none$|^n\/a$/i;
 
