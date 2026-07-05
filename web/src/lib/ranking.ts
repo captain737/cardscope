@@ -1,33 +1,44 @@
 // Deck ranking — the single place that decides which cards show and in
-// what order. Replaces the old "shuffle then sort by match count, keep
-// everything" logic that made the home deck feel choppy.
+// what order.
 //
-// Rules:
-//   - Owned cards are never suggested (you already have them).
-//   - With filters and/or complement active, only cards that actually
-//     score > 0 appear, best-first, in a *stable* order (no per-render
-//     reshuffle), so ranking reads as deliberate.
-//   - Preference match is the primary signal (weighted 2x). When the user
-//     owns cards, a "gap" bonus rewards cards that cover spending
-//     categories their current wallet doesn't — that's the "complement".
-//   - With nothing to rank by, the deck is a plain shuffle of everything.
+// Filters fall into two behaviours:
+//
+//   STRICT (hard filters — a card is excluded unless it qualifies):
+//     • account   personal / business / student. Personal shows only
+//                 personal cards; business only business; student shows
+//                 student AND personal cards (student-specific preferred),
+//                 never business.
+//     • reward    cash back vs rewards (travel/points) are distinct: a
+//                 cash-back filter never surfaces a points card, and vice
+//                 versa.
+//     • quality   No Annual Fee excludes every card that charges a fee
+//                 (checked against the real fee, not a tag); Premium shows
+//                 only premium cards.
+//
+//   SOFT (the spending family — dining / groceries / gas / balance
+//   transfer): complements, OR-matched. A card needs to cover at least one
+//   selected category to appear, and covering more ranks it higher.
+//
+// Better to show fewer cards that fully meet the criteria than to stretch
+// the deck to a fixed size with cards that don't — so there is no padding:
+// the deck is exactly the qualifying cards (capped at DECK_MAX), best-first.
 
-import { FILTERS, cardMatchesFilter } from './filters';
+import { cardMatchesFilter } from './filters';
 import { CreditCard } from '../types';
 
-// The raw tags that represent spending goals (travel, dining, gas, …).
-// Used to measure what a wallet already covers vs. what a card would add.
-const GOAL_TAGS = new Set(FILTERS.filter(f => f.group === 'goal').flatMap(f => f.matchTags));
+const ACCOUNT_IDS = ['personal', 'business', 'students'];
+const REWARD_IDS = ['cashback', 'travel'];
+const SPEND_IDS = ['dining', 'groceries', 'gas', 'balance'];
 
-export interface RankedCard {
-  card: CreditCard;
-  rank: number; // 1-based position, best first
-}
+// Raw tags used to measure what a wallet already covers vs. what a card adds.
+const GOAL_TAGS = new Set([...REWARD_IDS, ...SPEND_IDS].flatMap((id) => {
+  // travel expands to several raw tags; the rest map to themselves.
+  return id === 'travel' ? ['travel', 'flights', 'hotels', 'lounge'] : [id];
+}));
 
 export interface DeckResult {
   deck: CreditCard[];
-  /** True when the deck is ordered by score (show rank badges);
-   *  false for a plain shuffle. */
+  /** True when the deck is ordered by score (show rank badges). */
   ranked: boolean;
   /** True when ranking factored in the user's existing cards
    *  (badges read "best complement" instead of "best match"). */
@@ -43,34 +54,86 @@ function shuffle(cards: CreditCard[]): CreditCard[] {
   return next;
 }
 
+/** A card's account type; business/student take precedence over personal. */
+function cardAccount(card: CreditCard): 'business' | 'students' | 'personal' {
+  const tags = card.tags || [];
+  if (tags.includes('business')) return 'business';
+  if (tags.includes('students')) return 'students';
+  return 'personal';
+}
+
+/** True unless the card is a $0 annual fee. Unknown fees are treated as a
+ *  fee (we can't confirm they're free), so No Annual Fee stays strict. */
+function hasFee(card: CreditCard): boolean {
+  return card.facts.annualFee !== '$0';
+}
+
 /** Union of the raw tags across every card the user already holds. */
 export function ownedTagSet(ownedIds: string[], all: CreditCard[]): Set<string> {
   const tags = new Set<string>();
   for (const id of ownedIds) {
-    all.find(c => c.id === id)?.tags?.forEach(t => tags.add(t));
+    all.find((c) => c.id === id)?.tags?.forEach((t) => tags.add(t));
   }
   return tags;
 }
 
-/**
- * A card's score: how well it fits the active filters (primary, x2), plus
- * a complement bonus for each goal category it adds that the user's owned
- * cards don't already cover.
- */
-export function scoreCard(card: CreditCard, filters: string[], ownedTags: Set<string>): number {
-  const pref = filters.reduce((n, f) => n + (cardMatchesFilter(card.tags, f) ? 1 : 0), 0);
-  let gap = 0;
-  if (ownedTags.size > 0) {
-    gap = (card.tags || []).filter(t => GOAL_TAGS.has(t) && !ownedTags.has(t)).length;
+/** Hard-filter: does the card qualify under the strict + soft filters? */
+export function cardQualifies(card: CreditCard, filters: string[]): boolean {
+  const account = filters.find((f) => ACCOUNT_IDS.includes(f));
+  if (account) {
+    const a = cardAccount(card);
+    if (account === 'personal' && a !== 'personal') return false;
+    if (account === 'business' && a !== 'business') return false;
+    if (account === 'students' && a === 'business') return false; // student OR personal
   }
-  return pref * 2 + gap;
+
+  const rewards = filters.filter((f) => REWARD_IDS.includes(f));
+  if (rewards.length && !rewards.some((r) => cardMatchesFilter(card.tags, r))) return false;
+
+  if (filters.includes('no-fee') && hasFee(card)) return false;
+  if (filters.includes('premium') && !(card.tags || []).includes('premium')) return false;
+
+  const spend = filters.filter((f) => SPEND_IDS.includes(f));
+  if (spend.length && !spend.some((s) => cardMatchesFilter(card.tags, s))) return false;
+
+  return true;
 }
 
-const DECK_SIZE = 15;
+/**
+ * Orders qualifying cards. Everything here already passed the hard filters,
+ * so the score only decides sequence: more covered spend/reward categories
+ * first, student-specific cards ahead of plain personal in student mode, and
+ * a complement bonus for goal categories the user's wallet doesn't cover.
+ */
+export function scoreCard(
+  card: CreditCard,
+  filters: string[],
+  ownedTags: Set<string>,
+): number {
+  const tags = card.tags || [];
+  let score = 0;
+
+  const spend = filters.filter((f) => SPEND_IDS.includes(f));
+  score += spend.filter((s) => cardMatchesFilter(tags, s)).length * 2;
+
+  const rewards = filters.filter((f) => REWARD_IDS.includes(f));
+  score += rewards.filter((r) => cardMatchesFilter(tags, r)).length;
+
+  if (filters.includes('students') && tags.includes('students')) score += 6;
+
+  if (ownedTags.size > 0) {
+    score += tags.filter((t) => GOAL_TAGS.has(t) && !ownedTags.has(t)).length;
+  }
+
+  return score;
+}
+
+const DECK_MAX = 15;
 
 /**
- * Builds the ordered deck. `ranked` deck (filters and/or match mode) is
- * deterministic and best-first; otherwise a shuffled browse deck.
+ * Builds the ordered deck. With filters and/or match mode active, returns
+ * exactly the qualifying cards (best-first, deterministic), fewer than
+ * DECK_MAX if that's all that qualifies. Otherwise a shuffled browse deck.
  */
 export function buildDeck(
   all: CreditCard[],
@@ -79,26 +142,22 @@ export function buildDeck(
   matchMode: boolean,
 ): DeckResult {
   const owned = new Set(ownedIds);
-  const pool = all.filter(c => !owned.has(c.id));
+  const pool = all.filter((c) => !owned.has(c.id));
   const complement = ownedIds.length > 0;
   const wantRanked = matchMode || filters.length > 0;
 
   if (!wantRanked) {
-    return { deck: shuffle(pool).slice(0, DECK_SIZE), ranked: false, complement: false };
+    return { deck: shuffle(pool).slice(0, DECK_MAX), ranked: false, complement: false };
   }
 
+  const candidates = pool.filter((c) => cardQualifies(c, filters));
   const ownedTags = ownedTagSet(ownedIds, all);
-  const scored = pool
-    .map(card => ({ card, score: scoreCard(card, filters, ownedTags) }))
-    .filter(x => x.score > 0)
-    .sort((a, b) => b.score - a.score || a.card.name.localeCompare(b.card.name));
 
-  // Degenerate case (e.g. match mode with no derived filters and no owned
-  // cards): nothing scores, so fall back to a browse deck rather than an
-  // empty carousel.
-  if (scored.length === 0) {
-    return { deck: shuffle(pool).slice(0, DECK_SIZE), ranked: false, complement: false };
-  }
+  const deck = candidates
+    .map((card) => ({ card, score: scoreCard(card, filters, ownedTags) }))
+    .sort((a, b) => b.score - a.score || a.card.name.localeCompare(b.card.name))
+    .slice(0, DECK_MAX)
+    .map((x) => x.card);
 
-  return { deck: scored.slice(0, DECK_SIZE).map(x => x.card), ranked: true, complement };
+  return { deck, ranked: true, complement };
 }

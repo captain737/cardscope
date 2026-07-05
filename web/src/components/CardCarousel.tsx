@@ -90,8 +90,6 @@ export default function CardCarousel({
     : { type: "spring" as const, stiffness: 300, damping: 30, mass: 0.8 };
 
   const activeCard = cards[currentIndex];
-  if (!activeCard) return null;
-
   const rankLabel = complement ? 'best choice for you' : 'best match';
 
   return (
@@ -141,6 +139,8 @@ export default function CardCarousel({
         </>
       )}
 
+      {activeCard ? (
+      <>
       {/* Carousel */}
       <div className="relative z-10 w-full h-[360px] md:h-[440px] mt-8 md:mt-10 flex items-center justify-center perspective-[1200px]">
         {/* Navigation Arrows */}
@@ -238,6 +238,19 @@ export default function CardCarousel({
           ? `${cards.length} ${complement ? 'complementary' : 'matching'} card${cards.length === 1 ? '' : 's'} · ranked best-first`
           : `${cards.length} of ${allCards.length} cards · data crawled daily from issuer sites`}
       </p>
+      </>
+      ) : (
+        <div className="relative z-20 mt-24 md:mt-32 px-6 text-center flex flex-col items-center gap-3">
+          <p className="font-display text-2xl md:text-3xl text-[var(--cl-ink)]">No cards match these filters</p>
+          <p className="text-sm text-[var(--cl-muted)] max-w-sm">These categories are strict — try removing one to widen the results.</p>
+          <button
+            onClick={() => { setActiveFilters([]); setProviderFilter('all'); }}
+            className="mt-2 h-10 px-5 rounded-full bg-[var(--cl-pill)] text-[var(--cl-pill-ink)] text-sm font-semibold hover:opacity-90 transition-opacity"
+          >
+            Clear filters
+          </button>
+        </div>
+      )}
     </section>
   );
 }
