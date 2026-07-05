@@ -40,7 +40,6 @@ export const FILTERS: FilterDef[] = [
 
   // Quality — property of the card. Multi-select.
   { id: 'no-fee', label: 'No Annual Fee', group: 'quality', matchTags: ['no-fee'] },
-  { id: 'low-apr', label: 'Low APR', group: 'quality', matchTags: ['low-apr'] },
   { id: 'premium', label: 'Premium', group: 'quality', matchTags: ['premium', 'lounge'] },
 ];
 
@@ -51,11 +50,10 @@ export const FILTER_BY_ID: Record<string, FilterDef> = Object.fromEntries(
 const ACCOUNT_IDS = FILTERS.filter(f => f.group === 'account').map(f => f.id);
 
 // Quality conflicts: Premium (annual-fee, lounge-tier) and No Annual Fee
-// are contradictory; likewise Premium and Low APR rarely coexist.
+// are contradictory.
 const QUALITY_CONFLICTS: Record<string, string[]> = {
-  premium: ['no-fee', 'low-apr'],
+  premium: ['no-fee'],
   'no-fee': ['premium'],
-  'low-apr': ['premium'],
 };
 
 /**

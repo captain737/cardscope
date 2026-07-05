@@ -74,14 +74,14 @@ export default function CardCarousel({
   const activeCard = cards[currentIndex];
   if (!activeCard) return null;
 
-  const rankLabel = complement ? 'best complement' : 'best match';
+  const rankLabel = complement ? 'best choice for you' : 'best match';
 
   return (
     <section className="compare-light relative w-full min-h-screen pt-24 pb-24 flex flex-col items-center overflow-hidden bg-[var(--cl-bg)]">
       {matchMode ? (
         <div className="relative z-20 w-full mt-4 md:mt-6 flex flex-col items-center gap-3 px-4 text-center">
           <div className="flex items-center gap-2">
-            <h2 className="font-display font-semibold text-xl md:text-2xl text-[var(--cl-ink)]">Your best matches</h2>
+            <h2 className="font-display font-semibold text-3xl md:text-4xl text-[var(--cl-ink)]">Your best matches</h2>
           </div>
           <button
             onClick={onBrowseAll}

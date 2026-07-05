@@ -53,54 +53,68 @@ function parity(card: CreditCard): { label: string; state: Tri }[] {
 
 export default function Compare({ watchlist, setWatchlist, ownedCards, setOwnedCards }: CompareProps) {
   const { cards: allCards } = useCards();
-  const [leftCardId, setLeftCardId] = useState<string | null>(null);
-  const [rightCardId, setRightCardId] = useState<string | null>(null);
+  // Up to three comparison slots. Starts as a 1v1; the "+" adds a third.
+  const [slots, setSlots] = useState<(string | null)[]>([null, null]);
 
   const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [activeSlot, setActiveSlot] = useState<'left' | 'right' | 'watchlist' | null>(null);
+  const [activeSlot, setActiveSlot] = useState<number | 'watchlist' | 'new' | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const reduce = useReducedMotion();
 
-  const leftCard = allCards.find((c) => c.id === leftCardId);
-  const rightCard = allCards.find((c) => c.id === rightCardId);
+  const cardAt = (i: number) => allCards.find((c) => c.id === slots[i]);
 
   const handleDragStart = (e: React.DragEvent, cardId: string) => {
     e.dataTransfer.setData('cardId', cardId);
   };
 
-  const handleDrop = (e: React.DragEvent, slot: 'left' | 'right') => {
+  const handleDrop = (e: React.DragEvent, i: number) => {
     e.preventDefault();
     const cardId = e.dataTransfer.getData('cardId');
-    if (cardId) {
-      if (slot === 'left') setLeftCardId(cardId);
-      else setRightCardId(cardId);
-    }
+    if (cardId) setSlots((prev) => prev.map((s, idx) => (idx === i ? cardId : s)));
   };
 
-  const openSearch = (slot: 'left' | 'right' | 'watchlist') => {
+  const openSearch = (slot: number | 'watchlist') => {
     setActiveSlot(slot);
     setIsSearchOpen(true);
     setSearchQuery('');
   };
 
   const selectCard = (cardId: string) => {
-    if (activeSlot === 'left') setLeftCardId(cardId);
-    if (activeSlot === 'right') setRightCardId(cardId);
-    if (activeSlot === 'watchlist' && !watchlist.includes(cardId)) {
-      setWatchlist((prev) => [...prev, cardId]);
+    if (activeSlot === 'watchlist') {
+      if (!watchlist.includes(cardId)) setWatchlist((prev) => [...prev, cardId]);
+    } else if (activeSlot === 'new') {
+      setSlots((prev) => (prev.length >= 3 ? prev : [...prev, cardId]));
+    } else if (typeof activeSlot === 'number') {
+      const i = activeSlot;
+      setSlots((prev) => prev.map((s, idx) => (idx === i ? cardId : s)));
     }
     setIsSearchOpen(false);
   };
 
-  // Draw a random 1v1: prefer the user's own cards + watchlist as the
-  // pool, falling back to the full deck so Shuffle always does something.
+  // Add a third card: opens search; the new column materializes in the
+  // middle once a card is chosen (see selectCard's 'new' branch).
+  const addSlot = () => {
+    if (slots.length >= 3) return;
+    setActiveSlot('new');
+    setIsSearchOpen(true);
+    setSearchQuery('');
+  };
+
+  // X clears the first two slots in place; a third slot is removed outright.
+  const removeSlot = (i: number) => {
+    setSlots((prev) =>
+      i >= 2 ? prev.filter((_, idx) => idx !== i) : prev.map((s, idx) => (idx === i ? null : s)),
+    );
+  };
+
+  // Shuffle fills every current slot with a distinct random card. Prefers the
+  // user's own cards + watchlist, falling back to the full deck.
   const shuffleCards = () => {
     const pool = [...new Set([...ownedCards, ...watchlist])];
-    const source = pool.length >= 2 ? pool : allCards.map((c) => c.id);
-    if (source.length < 2) return;
+    const source = pool.length >= slots.length ? pool : allCards.map((c) => c.id);
+    if (source.length < slots.length) return;
     const shuffled = [...source].sort(() => 0.5 - Math.random());
-    setLeftCardId(shuffled[0]);
-    setRightCardId(shuffled[1]);
+    setSlots((prev) => prev.map((_, i) => shuffled[i]));
   };
 
   const filteredCards = allCards.filter(
@@ -109,7 +123,7 @@ export default function Compare({ watchlist, setWatchlist, ownedCards, setOwnedC
       c.issuer.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
-  const hasAny = Boolean(leftCard || rightCard);
+  const hasAny = slots.some((s) => s);
 
   return (
     <div className="compare-light min-h-screen bg-[var(--cl-bg)] pt-24 pb-24 px-4 md:px-8">
@@ -151,12 +165,8 @@ export default function Compare({ watchlist, setWatchlist, ownedCards, setOwnedC
           />
         </div>
 
-        {/* Section header + shuffle */}
-        <div className="flex items-end justify-between gap-4 mb-8 border-b border-[var(--cl-hairline)] pb-5">
-          <div>
-            <h1 className="font-display text-3xl md:text-4xl text-[var(--cl-ink)] leading-none">Compare</h1>
-            <p className="mt-2 text-sm text-[var(--cl-muted)]">Two cards, side by side. The details that decide it.</p>
-          </div>
+        {/* Shuffle control */}
+        <div className="flex justify-end mb-8">
           <button
             onClick={shuffleCards}
             className="inline-flex items-center gap-2 rounded-full border border-[var(--cl-hairline-strong)] px-4 h-10 text-sm font-medium text-[var(--cl-ink)] hover:bg-[var(--cl-panel)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cl-ink)]/30"
@@ -166,34 +176,50 @@ export default function Compare({ watchlist, setWatchlist, ownedCards, setOwnedC
           </button>
         </div>
 
-        {/* Editorial 1v1 */}
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={`${leftCardId}::${rightCardId}`}
-            initial={reduce ? false : { opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: reduce ? 0 : 0.25, ease: [0.16, 1, 0.3, 1] }}
-            className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8 items-start"
-          >
+        {/* Editorial comparison: up to three cards */}
+        <motion.div
+          key={slots.length}
+          initial={reduce ? false : { opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: reduce ? 0 : 0.2, ease: [0.16, 1, 0.3, 1] }}
+          className="flex flex-col md:flex-row items-stretch gap-4 md:gap-6"
+        >
+          <div className="flex-1 min-w-0">
             <CompareColumn
-              card={leftCard}
-              featured
-              onDrop={(e) => handleDrop(e, 'left')}
-              onOpenSearch={() => openSearch('left')}
-              onRemove={() => setLeftCardId(null)}
+              card={cardAt(0)}
+              onDrop={(e) => handleDrop(e, 0)}
+              onOpenSearch={() => openSearch(0)}
+              onRemove={() => removeSlot(0)}
             />
+          </div>
+
+          {/* Middle: the third card, or a card-shaped "add" placeholder */}
+          <div className="flex-1 min-w-0">
+            {slots.length === 3 ? (
+              <CompareColumn
+                card={cardAt(2)}
+                onDrop={(e) => handleDrop(e, 2)}
+                onOpenSearch={() => openSearch(2)}
+                onRemove={() => removeSlot(2)}
+              />
+            ) : (
+              <AddCardSlot onClick={addSlot} />
+            )}
+          </div>
+
+          <div className="flex-1 min-w-0">
             <CompareColumn
-              card={rightCard}
-              onDrop={(e) => handleDrop(e, 'right')}
-              onOpenSearch={() => openSearch('right')}
-              onRemove={() => setRightCardId(null)}
+              card={cardAt(1)}
+              onDrop={(e) => handleDrop(e, 1)}
+              onOpenSearch={() => openSearch(1)}
+              onRemove={() => removeSlot(1)}
             />
-          </motion.div>
-        </AnimatePresence>
+          </div>
+        </motion.div>
 
         {!hasAny && (
           <p className="mt-8 text-center text-sm text-[var(--cl-muted)]">
-            Pick a card for each side, or hit Shuffle to draw a random matchup.
+            Pick a card for each side, add a third with +, or hit Shuffle for a random matchup.
           </p>
         )}
       </div>
@@ -205,7 +231,7 @@ export default function Compare({ watchlist, setWatchlist, ownedCards, setOwnedC
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[var(--cl-ink)]/25 backdrop-blur-sm"
+            className="fixed inset-0 z-50 flex items-start justify-center px-4 pt-[42vh] pb-4 bg-[var(--cl-ink)]/25 backdrop-blur-sm"
             onClick={() => setIsSearchOpen(false)}
           >
             <motion.div
@@ -232,7 +258,7 @@ export default function Compare({ watchlist, setWatchlist, ownedCards, setOwnedC
                   <X className="w-5 h-5" />
                 </button>
               </div>
-              <div className="overflow-y-auto p-2">
+              <div className="max-h-[256px] overflow-y-auto p-2">
                 {filteredCards.length > 0 ? (
                   filteredCards.map((c) => (
                     <button
@@ -263,31 +289,30 @@ export default function Compare({ watchlist, setWatchlist, ownedCards, setOwnedC
 
 function CompareColumn({
   card,
-  featured = false,
   onDrop,
   onOpenSearch,
   onRemove,
 }: {
   card?: CreditCard;
-  featured?: boolean;
   onDrop: (e: React.DragEvent) => void;
   onOpenSearch: () => void;
   onRemove: () => void;
 }) {
   if (!card) {
     return (
-      <button
-        onClick={onOpenSearch}
-        onDragOver={(e) => e.preventDefault()}
-        onDrop={onDrop}
-        className={`w-full min-h-[460px] rounded-[2rem] border-2 border-dashed border-[var(--cl-hairline-strong)] flex flex-col items-center justify-center gap-3 text-[var(--cl-muted)] hover:text-[var(--cl-ink)] hover:border-[var(--cl-ink)]/50 transition-colors ${
-          featured ? 'bg-[var(--cl-panel)]/50' : ''
-        }`}
-      >
-        <Plus className="w-8 h-8" strokeWidth={1.25} />
-        <span className="font-medium text-[var(--cl-ink)]">Select a card</span>
-        <span className="text-sm">or drag one from above</span>
-      </button>
+      <div className="w-full flex justify-center py-4">
+        <button
+          onClick={onOpenSearch}
+          onDragOver={(e) => e.preventDefault()}
+          onDrop={onDrop}
+          aria-label="Select a card to compare"
+          className="w-[240px] h-[360px] md:w-[280px] md:h-[420px] rounded-[1.5rem] md:rounded-[2rem] border-2 border-dashed border-[var(--cl-hairline-strong)] flex flex-col items-center justify-center gap-3 text-[var(--cl-muted)] hover:text-[var(--cl-ink)] hover:border-[var(--cl-ink)]/50 transition-colors"
+        >
+          <Plus className="w-8 h-8" strokeWidth={1.25} />
+          <span className="font-medium text-[var(--cl-ink)]">Select a card</span>
+          <span className="text-sm">or drag one from above</span>
+        </button>
+      </div>
     );
   }
 
@@ -299,22 +324,16 @@ function CompareColumn({
     <div
       onDragOver={(e) => e.preventDefault()}
       onDrop={onDrop}
-      className={`relative rounded-[2rem] px-6 py-8 md:px-10 md:py-11 ${
-        featured ? 'bg-[var(--cl-panel)] shadow-[0_20px_50px_-30px_rgba(0,0,0,0.35)]' : ''
-      }`}
+      className="relative rounded-[2rem] px-6 py-8 md:px-10 md:py-11 bg-[var(--cl-panel)] shadow-[0_20px_50px_-30px_rgba(0,0,0,0.35)]"
     >
       {/* Masthead: identity + controls + product shot */}
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--cl-muted)]">{card.issuer}</p>
-          <h2
-            className={`mt-2 font-display text-[var(--cl-ink)] leading-[1.05] text-balance ${
-              featured ? 'text-[2.2rem] md:text-[2.75rem]' : 'text-3xl md:text-[2.25rem] font-medium'
-            }`}
-          >
+          <h2 className="mt-2 font-display font-semibold text-[1.75rem] md:text-[2.1rem] text-[var(--cl-ink)] leading-[1.1] text-balance">
             {card.name}
           </h2>
-          {featured && <div className="mt-4 h-[3px] w-12 rounded-full bg-[var(--cl-gold)]" />}
+          <div className="mt-4 h-[3px] w-12 rounded-full bg-[var(--cl-gold)]" />
         </div>
 
         <div className="flex flex-col items-end gap-3 shrink-0">
@@ -372,29 +391,35 @@ function CompareColumn({
       {/* CTA */}
       <div className="mt-9">
         {card.applyUrl ? (
-          featured ? (
-            <a
-              href={card.applyUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 rounded-full bg-[var(--cl-pill)] text-[var(--cl-pill-ink)] px-6 py-3 text-[12px] font-semibold uppercase tracking-[0.12em] hover:opacity-90 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cl-ink)]/40 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--cl-panel)]"
-            >
-              Visit site <ArrowUpRight className="w-4 h-4" />
-            </a>
-          ) : (
-            <a
-              href={card.applyUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 pb-0.5 border-b border-[var(--cl-ink)]/30 text-[12px] font-semibold uppercase tracking-[0.12em] text-[var(--cl-ink)] hover:border-[var(--cl-gold)] hover:text-[var(--cl-gold)] transition-colors"
-            >
-              Visit site <ArrowUpRight className="w-4 h-4" />
-            </a>
-          )
+          <a
+            href={card.applyUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 rounded-full bg-[var(--cl-pill)] text-[var(--cl-pill-ink)] px-6 py-3 text-[12px] font-semibold uppercase tracking-[0.12em] hover:opacity-90 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cl-ink)]/40 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--cl-panel)]"
+          >
+            Visit site <ArrowUpRight className="w-4 h-4" />
+          </a>
         ) : (
           <span className="text-[11px] uppercase tracking-wider text-[var(--cl-muted)]">Link unavailable</span>
         )}
       </div>
+    </div>
+  );
+}
+
+// Card-shaped placeholder that adds a third comparison card when clicked.
+function AddCardSlot({ onClick }: { onClick: () => void }) {
+  return (
+    <div className="w-full flex justify-center py-4">
+      <button
+        onClick={onClick}
+        aria-label="Add a third card to compare"
+        className="w-[240px] h-[360px] md:w-[280px] md:h-[420px] rounded-[1.5rem] md:rounded-[2rem] border-2 border-dashed border-[var(--cl-hairline-strong)] flex flex-col items-center justify-center gap-3 text-[var(--cl-muted)] hover:text-[var(--cl-ink)] hover:border-[var(--cl-ink)]/50 transition-colors"
+      >
+        <Plus className="w-8 h-8" strokeWidth={1.25} />
+        <span className="font-medium text-[var(--cl-ink)]">Add a card</span>
+        <span className="text-sm">compare up to three</span>
+      </button>
     </div>
   );
 }
@@ -448,11 +473,11 @@ function Rail({
   addButton?: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-col items-center gap-3 min-w-0">
+    <div className="flex flex-col items-center gap-6 min-w-0">
       <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--cl-muted)] flex items-center gap-1.5">
         <span className="text-[var(--cl-gold)]">{icon}</span> {label}
       </span>
-      <div className="flex gap-4 overflow-x-auto pb-2 hide-scrollbar max-w-full">
+      <div className="flex gap-4 overflow-x-auto pt-2 pb-2 hide-scrollbar max-w-full">
         {ids.map((id) => {
           const card = allCards.find((c) => c.id === id);
           if (!card) return null;
@@ -461,15 +486,19 @@ function Rail({
               key={id}
               draggable
               onDragStart={(e) => onDragStart(e, id)}
-              className="shrink-0 relative w-[96px] h-[144px] md:w-[112px] md:h-[168px] cursor-grab active:cursor-grabbing transition-transform hover:scale-105 group"
+              className="shrink-0 relative w-[96px] h-[144px] md:w-[112px] md:h-[168px] cursor-grab active:cursor-grabbing group"
             >
-              <div className="absolute top-0 left-0 pointer-events-none origin-top-left scale-[0.4]">
-                <CardVisual card={card} />
+              {/* Clip the card art (and its heavy drop-shadow) to a neat,
+                  card-shaped rectangle so it sits flat in the rail. */}
+              <div className="absolute inset-0 overflow-hidden rounded-[0.7rem]">
+                <div className="absolute top-0 left-0 pointer-events-none origin-top-left scale-[0.4]">
+                  <CardVisual card={card} />
+                </div>
               </div>
               <button
                 onClick={() => onRemove(id)}
                 aria-label={`Remove ${card.name}`}
-                className="absolute -top-2 -right-2 bg-[var(--cl-bg)] text-[var(--cl-muted)] hover:text-[var(--cl-ink)] p-1.5 rounded-full border border-[var(--cl-hairline-strong)] shadow-sm opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity z-30"
+                className="absolute top-1.5 right-1.5 bg-[var(--cl-bg)] text-[var(--cl-muted)] hover:text-[var(--cl-ink)] p-1 rounded-full border border-[var(--cl-hairline-strong)] shadow-sm opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity z-30"
               >
                 <X className="w-3 h-3" />
               </button>

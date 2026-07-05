@@ -117,7 +117,7 @@ export default function FindMyCard({ open, onClose, onComplete }: FindMyCardProp
     <AnimatePresence>
       {open && (
         <motion.div
-          className="fixed inset-0 z-50 overflow-y-auto bg-bg/45 backdrop-blur-2xl"
+          className="compare-light fixed inset-0 z-50 overflow-y-auto bg-[var(--cl-bg)]/90 backdrop-blur-2xl"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -129,7 +129,7 @@ export default function FindMyCard({ open, onClose, onComplete }: FindMyCardProp
           <button
             onClick={onClose}
             aria-label="Close"
-            className="fixed top-5 right-5 z-10 w-10 h-10 rounded-full bg-surface/70 backdrop-blur border border-border text-muted hover:text-ink hover:border-border-strong transition-colors flex items-center justify-center"
+            className="fixed top-5 right-5 z-10 w-10 h-10 rounded-full bg-[var(--cl-panel)] border border-[var(--cl-hairline-strong)] text-[var(--cl-muted)] hover:text-[var(--cl-ink)] hover:border-[var(--cl-ink)] transition-colors flex items-center justify-center"
           >
             <X className="w-4 h-4" />
           </button>
@@ -164,13 +164,13 @@ export default function FindMyCard({ open, onClose, onComplete }: FindMyCardProp
                 <>
                   <button
                     onClick={() => go(index + 1)}
-                    className="px-6 py-3 rounded-full bg-surface-raised border border-border text-muted hover:text-ink hover:border-border-strong font-medium transition-colors"
+                    className="px-6 py-3 rounded-full bg-transparent border border-[var(--cl-hairline-strong)] text-[var(--cl-muted)] hover:text-[var(--cl-ink)] hover:border-[var(--cl-ink)] font-medium transition-colors"
                   >
                     Skip for now
                   </button>
                   <button
                     onClick={() => go(index + 1)}
-                    className="px-7 py-3 rounded-full bg-primary text-bg hover:bg-primary-deep font-semibold flex items-center gap-2 transition-colors"
+                    className="px-7 py-3 rounded-full bg-[var(--cl-pill)] text-[var(--cl-pill-ink)] hover:opacity-90 font-semibold flex items-center gap-2 transition-opacity"
                   >
                     Continue <ChevronRight className="w-4 h-4" />
                   </button>
@@ -179,14 +179,14 @@ export default function FindMyCard({ open, onClose, onComplete }: FindMyCardProp
                 <>
                   <button
                     onClick={() => go(index - 1)}
-                    className="px-6 py-3 rounded-full bg-surface-raised border border-border text-muted hover:text-ink hover:border-border-strong font-medium flex items-center gap-2 transition-colors"
+                    className="px-6 py-3 rounded-full bg-transparent border border-[var(--cl-hairline-strong)] text-[var(--cl-muted)] hover:text-[var(--cl-ink)] hover:border-[var(--cl-ink)] font-medium flex items-center gap-2 transition-colors"
                   >
                     <ChevronLeft className="w-4 h-4" /> Back
                   </button>
                   {isLast ? (
                     <button
                       onClick={finish}
-                      className="px-8 py-3 rounded-full bg-primary text-bg hover:bg-primary-deep font-bold flex items-center gap-2 transition-colors"
+                      className="px-8 py-3 rounded-full bg-[var(--cl-pill)] text-[var(--cl-pill-ink)] hover:opacity-90 font-bold flex items-center gap-2 transition-opacity"
                     >
                       Find My Matches <ChevronRight className="w-4 h-4" />
                     </button>
@@ -194,8 +194,8 @@ export default function FindMyCard({ open, onClose, onComplete }: FindMyCardProp
                     <button
                       onClick={() => go(index + 1)}
                       disabled={!answered}
-                      className={`px-7 py-3 rounded-full font-semibold flex items-center gap-2 transition-colors ${
-                        answered ? 'bg-primary text-bg hover:bg-primary-deep' : 'bg-border/60 text-muted cursor-not-allowed'
+                      className={`px-7 py-3 rounded-full font-semibold flex items-center gap-2 transition-opacity ${
+                        answered ? 'bg-[var(--cl-pill)] text-[var(--cl-pill-ink)] hover:opacity-90' : 'bg-[var(--cl-hairline)] text-[var(--cl-muted)] cursor-not-allowed'
                       }`}
                     >
                       Continue <ChevronRight className="w-4 h-4" />
@@ -216,8 +216,8 @@ export default function FindMyCard({ open, onClose, onComplete }: FindMyCardProp
 function Heading({ title, hint }: { title: string; hint?: string }) {
   return (
     <>
-      <h2 className="font-display font-bold text-2xl md:text-3xl text-ink text-balance mb-2">{title}</h2>
-      {hint && <p className="text-muted text-sm mb-7 max-w-md">{hint}</p>}
+      <h2 className="font-display font-bold text-2xl md:text-3xl text-[var(--cl-ink)] text-balance mb-2">{title}</h2>
+      {hint && <p className="text-[var(--cl-muted)] text-sm mb-7 max-w-md">{hint}</p>}
       {!hint && <div className="mb-7" />}
     </>
   );
@@ -226,6 +226,7 @@ function Heading({ title, hint }: { title: string; hint?: string }) {
 interface StepProps { answers: Answers; set: (p: Partial<Answers>) => void; }
 
 function EmailStep({ answers, set }: StepProps) {
+  const inputClass = 'flex-1 min-w-0 h-12 px-4 rounded-2xl bg-[var(--cl-bg)] border border-[var(--cl-hairline-strong)] text-[var(--cl-ink)] placeholder-[var(--cl-muted)] text-[15px] focus:outline-none focus:border-[var(--cl-gold)] transition-colors';
   return (
     <div className="w-full flex flex-col items-center">
       <Heading title="Save your progress" hint="Drop your name and email so we remember your cards and matches next time. Totally optional." />
@@ -235,13 +236,13 @@ function EmailStep({ answers, set }: StepProps) {
             value={answers.firstName}
             onChange={e => set({ firstName: e.target.value })}
             placeholder="First name"
-            className="flex-1 min-w-0 h-12 px-4 rounded-2xl bg-bg border border-border text-ink placeholder-muted text-[15px] focus:outline-none focus:border-primary transition-colors"
+            className={inputClass}
           />
           <input
             value={answers.lastName}
             onChange={e => set({ lastName: e.target.value })}
             placeholder="Last name"
-            className="flex-1 min-w-0 h-12 px-4 rounded-2xl bg-bg border border-border text-ink placeholder-muted text-[15px] focus:outline-none focus:border-primary transition-colors"
+            className={inputClass}
           />
         </div>
         <input
@@ -249,13 +250,16 @@ function EmailStep({ answers, set }: StepProps) {
           value={answers.email}
           onChange={e => set({ email: e.target.value })}
           placeholder="Email address"
-          className="w-full h-12 px-4 rounded-2xl bg-bg border border-border text-ink placeholder-muted text-[15px] focus:outline-none focus:border-primary transition-colors"
+          className="w-full h-12 px-4 rounded-2xl bg-[var(--cl-bg)] border border-[var(--cl-hairline-strong)] text-[var(--cl-ink)] placeholder-[var(--cl-muted)] text-[15px] focus:outline-none focus:border-[var(--cl-gold)] transition-colors"
         />
-        <p className="text-xs text-muted mt-1">No account, no password. We just use this to remember you.</p>
+        <p className="text-xs text-[var(--cl-muted)] mt-1">No account, no password. We just use this to remember you.</p>
       </div>
     </div>
   );
 }
+
+const tileActive = 'bg-[var(--cl-panel)] border-[var(--cl-ink)] text-[var(--cl-ink)]';
+const tileIdle = 'bg-transparent border-[var(--cl-hairline-strong)] text-[var(--cl-muted)] hover:border-[var(--cl-ink)] hover:text-[var(--cl-ink)]';
 
 function HasCardStep({ answers, set }: StepProps) {
   return (
@@ -270,8 +274,8 @@ function HasCardStep({ answers, set }: StepProps) {
             key={String(o.v)}
             onClick={() => set({ hasCard: o.v, ...(o.v ? {} : { ownedCards: [], credit: undefined }) })}
             aria-pressed={answers.hasCard === o.v}
-            className={`flex-1 px-6 py-5 rounded-2xl border font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 ${
-              answers.hasCard === o.v ? 'bg-primary/10 border-primary text-ink' : 'bg-bg border-border text-muted hover:border-border-strong hover:text-ink'
+            className={`flex-1 px-6 py-5 rounded-2xl border font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cl-ink)]/30 ${
+              answers.hasCard === o.v ? tileActive : tileIdle
             }`}
           >
             {o.label}
@@ -301,13 +305,13 @@ function OwnedCardsStep({ answers, set }: StepProps) {
               const c = cards.find(x => x.id === id);
               if (!c) return null;
               return (
-                <div key={id} className="flex items-center gap-3 bg-bg border border-border rounded-2xl p-2.5 pl-3">
+                <div key={id} className="flex items-center gap-3 bg-[var(--cl-bg)] border border-[var(--cl-hairline-strong)] rounded-2xl p-2.5 pl-3">
                   <div className={`w-9 h-9 rounded-lg ${c.gradient} shrink-0`} />
                   <div className="flex-1 text-left min-w-0">
-                    <div className="text-ink font-medium text-sm truncate">{c.name}</div>
-                    <div className="text-muted text-xs uppercase tracking-wide">{c.issuer}</div>
+                    <div className="text-[var(--cl-ink)] font-medium text-sm truncate">{c.name}</div>
+                    <div className="text-[var(--cl-muted)] text-xs uppercase tracking-wide">{c.issuer}</div>
                   </div>
-                  <button onClick={() => remove(id)} aria-label={`Remove ${c.name}`} className="w-8 h-8 rounded-full text-muted hover:text-ink flex items-center justify-center shrink-0">
+                  <button onClick={() => remove(id)} aria-label={`Remove ${c.name}`} className="w-8 h-8 rounded-full text-[var(--cl-muted)] hover:text-[var(--cl-ink)] flex items-center justify-center shrink-0">
                     <X className="w-4 h-4" />
                   </button>
                 </div>
@@ -316,24 +320,24 @@ function OwnedCardsStep({ answers, set }: StepProps) {
           </div>
         )}
         <div className="relative">
-          <Search className="w-4 h-4 text-muted absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" />
+          <Search className="w-4 h-4 text-[var(--cl-muted)] absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" />
           <input
             value={query}
             onChange={e => setQuery(e.target.value)}
             placeholder="Search for a card…"
-            className="w-full h-12 pl-11 pr-4 rounded-2xl bg-bg border border-border text-ink placeholder-muted text-[15px] focus:outline-none focus:border-primary transition-colors"
+            className="w-full h-12 pl-11 pr-4 rounded-2xl bg-[var(--cl-bg)] border border-[var(--cl-hairline-strong)] text-[var(--cl-ink)] placeholder-[var(--cl-muted)] text-[15px] focus:outline-none focus:border-[var(--cl-gold)] transition-colors"
           />
         </div>
         {matches.length > 0 && (
-          <div className="mt-2 bg-bg border border-border rounded-2xl overflow-hidden">
+          <div className="mt-2 bg-[var(--cl-bg)] border border-[var(--cl-hairline-strong)] rounded-2xl overflow-hidden">
             {matches.map(c => (
-              <button key={c.id} onClick={() => add(c.id)} className="w-full flex items-center gap-3 p-2.5 pl-3 hover:bg-surface-raised transition-colors text-left">
+              <button key={c.id} onClick={() => add(c.id)} className="w-full flex items-center gap-3 p-2.5 pl-3 hover:bg-[var(--cl-panel)] transition-colors text-left">
                 <div className={`w-8 h-8 rounded-lg ${c.gradient} shrink-0`} />
                 <div className="flex-1 min-w-0">
-                  <div className="text-ink font-medium text-sm truncate">{c.name}</div>
-                  <div className="text-muted text-xs uppercase tracking-wide">{c.issuer}</div>
+                  <div className="text-[var(--cl-ink)] font-medium text-sm truncate">{c.name}</div>
+                  <div className="text-[var(--cl-muted)] text-xs uppercase tracking-wide">{c.issuer}</div>
                 </div>
-                <Plus className="w-4 h-4 text-primary shrink-0" />
+                <Plus className="w-4 h-4 text-[var(--cl-gold)] shrink-0" />
               </button>
             ))}
           </div>
@@ -359,8 +363,8 @@ function CreditStep({ answers, set }: StepProps) {
             key={o.id}
             onClick={() => set({ credit: o.id })}
             aria-pressed={answers.credit === o.id}
-            className={`p-5 rounded-2xl border flex flex-col items-center gap-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 ${
-              answers.credit === o.id ? 'bg-primary/10 border-primary text-ink' : 'bg-bg border-border text-muted hover:border-border-strong hover:text-ink'
+            className={`p-5 rounded-2xl border flex flex-col items-center gap-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cl-ink)]/30 ${
+              answers.credit === o.id ? tileActive : tileIdle
             }`}
           >
             <span className="font-display font-semibold text-lg">{o.label}</span>
@@ -406,11 +410,11 @@ function FeeStep({ answers, set }: StepProps) {
   return (
     <div className="w-full flex flex-col items-center">
       <Heading title="What's your max annual fee?" />
-      <div className="w-full max-w-md bg-bg border border-border rounded-2xl p-6">
-        <div className="font-display font-bold text-4xl text-primary mb-6">${answers.maxFee}</div>
-        <div className="relative w-full h-1.5 bg-border rounded-full mb-2">
-          <div className="absolute top-0 left-0 h-full bg-primary rounded-full" style={{ width: `${(answers.maxFee / 700) * 100}%` }}>
-            <div className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 w-4 h-4 bg-ink rounded-full border-2 border-bg shadow-md" />
+      <div className="w-full max-w-md">
+        <div className="font-display font-bold text-5xl text-[var(--cl-ink)] mb-6">${answers.maxFee}</div>
+        <div className="relative w-full h-1.5 bg-[var(--cl-hairline)] rounded-full mb-2">
+          <div className="absolute top-0 left-0 h-full bg-[var(--cl-pill)] rounded-full" style={{ width: `${(answers.maxFee / 700) * 100}%` }}>
+            <div className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 w-4 h-4 bg-[var(--cl-ink)] rounded-full border-2 border-[var(--cl-bg)] shadow-md" />
           </div>
           <input
             type="range" min="0" max="700" step="50" value={answers.maxFee}
@@ -419,7 +423,7 @@ function FeeStep({ answers, set }: StepProps) {
             aria-label="Maximum annual fee"
           />
         </div>
-        <p className="text-muted text-sm mt-4">{answers.maxFee === 0 ? 'Targeting cards with no annual fee' : 'Open to a fee for better perks'}</p>
+        <p className="text-[var(--cl-muted)] text-sm mt-4">{answers.maxFee === 0 ? 'Targeting cards with no annual fee' : 'Open to a fee for better perks'}</p>
       </div>
     </div>
   );
@@ -429,17 +433,17 @@ function SpendStep({ answers, set }: StepProps) {
   return (
     <div className="w-full flex flex-col items-center">
       <Heading title="Where does your money go?" hint="Set how much you spend in each." />
-      <div className="flex flex-col gap-3 w-full max-w-md">
+      <div className="flex flex-col w-full max-w-md">
         {SPEND_CATS.map(cat => (
-          <div key={cat.key} className="flex flex-col sm:flex-row sm:items-center gap-3 bg-bg border border-border rounded-2xl p-4">
-            <span className="font-medium text-ink text-[15px] flex-1 text-center sm:text-left">{cat.label}</span>
-            <div className="flex gap-1 bg-surface rounded-full p-1 border border-border mx-auto sm:mx-0" role="group" aria-label={`${cat.label} spending`}>
+          <div key={cat.key} className="flex flex-col sm:flex-row sm:items-center gap-3 py-4 border-b border-[var(--cl-hairline)] last:border-b-0">
+            <span className="font-medium text-[var(--cl-ink)] text-[15px] flex-1 text-center sm:text-left">{cat.label}</span>
+            <div className="flex gap-1 bg-[var(--cl-panel)] rounded-full p-1 border border-[var(--cl-hairline-strong)] mx-auto sm:mx-0" role="group" aria-label={`${cat.label} spending`}>
               {['A little', 'Some', 'A lot'].map((lbl, i) => (
                 <button
                   key={lbl}
                   onClick={() => set({ spend: { ...answers.spend, [cat.key]: i } })}
                   aria-pressed={answers.spend[cat.key] === i}
-                  className={`px-3.5 py-1.5 rounded-full text-xs font-medium transition-colors ${answers.spend[cat.key] === i ? 'bg-primary text-bg' : 'text-muted hover:text-ink'}`}
+                  className={`px-3.5 py-1.5 rounded-full text-xs font-medium transition-colors ${answers.spend[cat.key] === i ? 'bg-[var(--cl-pill)] text-[var(--cl-pill-ink)]' : 'text-[var(--cl-muted)] hover:text-[var(--cl-ink)]'}`}
                 >
                   {lbl}
                 </button>
@@ -460,8 +464,8 @@ function ToggleRow({ options, active, onChange, large = false }: { options: { id
           key={opt.id}
           onClick={() => onChange(opt.id)}
           aria-pressed={active === opt.id}
-          className={`flex-1 rounded-2xl border p-5 flex flex-col items-center gap-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 ${
-            active === opt.id ? 'bg-primary/10 border-primary text-ink' : 'bg-bg border-border text-muted hover:border-border-strong hover:text-ink'
+          className={`flex-1 rounded-2xl border p-5 flex flex-col items-center gap-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cl-ink)]/30 ${
+            active === opt.id ? tileActive : tileIdle
           }`}
         >
           <span className={large ? 'text-lg font-display font-semibold' : 'font-medium'}>{opt.label}</span>
