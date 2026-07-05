@@ -1,12 +1,22 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
-import { ChevronLeft, ChevronRight, Shuffle } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ChevronDown, Shuffle } from 'lucide-react';
 import CardVisual from './CardVisual';
 import CardFacts from './CardFacts';
 import BubbleFilters from './BubbleFilters';
 import { buildDeck } from '../lib/ranking';
 import { useCards } from '../hooks/useCards';
 import { CreditCard } from '../types';
+
+// Friendly names for the provider filter; unknown slugs fall back to a
+// title-cased version of the slug.
+const PROVIDER_LABELS: Record<string, string> = {
+  chase: 'Chase', citi: 'Citi', capital_one: 'Capital One', amex: 'American Express',
+  wells_fargo: 'Wells Fargo', us_bank: 'U.S. Bank', discover: 'Discover',
+  barclays: 'Barclays', bank_of_america: 'Bank of America', synchrony: 'Synchrony',
+};
+const providerLabel = (p: string) =>
+  PROVIDER_LABELS[p] ?? p.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 
 interface CardCarouselProps {
   watchlist: string[];
@@ -29,17 +39,25 @@ export default function CardCarousel({
   const [complement, setComplement] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [nonce, setNonce] = useState(0); // bump to force a reshuffle
+  const [providerFilter, setProviderFilter] = useState('all');
   const reducedMotion = useReducedMotion();
+
+  // Distinct providers present in the deck, for the filter dropdown.
+  const providers = useMemo(
+    () => [...new Set(allCards.map((c) => c.provider).filter(Boolean) as string[])].sort(),
+    [allCards],
+  );
 
   // Rebuild the deck whenever the inputs to ranking change. Ranked decks
   // are deterministic (best-first, stable); browse decks are shuffled.
   useEffect(() => {
-    const result = buildDeck(allCards, activeFilters, ownedCards, matchMode);
+    const pool = providerFilter === 'all' ? allCards : allCards.filter((c) => c.provider === providerFilter);
+    const result = buildDeck(pool, activeFilters, ownedCards, matchMode);
     setCards(result.deck);
     setRanked(result.ranked);
     setComplement(result.complement);
     setCurrentIndex(0);
-  }, [allCards, activeFilters, ownedCards, matchMode, nonce]);
+  }, [allCards, activeFilters, ownedCards, matchMode, nonce, providerFilter]);
 
   const nextCard = useCallback(() => {
     setCurrentIndex((prev) => (prev + 1) % cards.length);
@@ -96,7 +114,21 @@ export default function CardCarousel({
             <BubbleFilters activeFilters={activeFilters} onFiltersChange={setActiveFilters} />
           </div>
 
-          <div className="relative z-20 w-full max-w-6xl mx-auto px-4 md:px-6 mt-5 flex justify-end">
+          <div className="relative z-20 w-full max-w-6xl mx-auto px-4 md:px-6 mt-5 flex justify-end items-center gap-3">
+            <div className="relative">
+              <select
+                value={providerFilter}
+                onChange={(e) => setProviderFilter(e.target.value)}
+                aria-label="Filter by card provider"
+                className="appearance-none h-10 pl-4 pr-9 rounded-full border border-[var(--cl-hairline-strong)] bg-transparent text-sm font-medium text-[var(--cl-ink)] hover:bg-[var(--cl-panel)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cl-ink)]/30 transition-colors cursor-pointer"
+              >
+                <option value="all">All providers</option>
+                {providers.map((p) => (
+                  <option key={p} value={p}>{providerLabel(p)}</option>
+                ))}
+              </select>
+              <ChevronDown className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-[var(--cl-muted)]" />
+            </div>
             <button
               onClick={shuffleCards}
               aria-label="Shuffle deck and clear filters"

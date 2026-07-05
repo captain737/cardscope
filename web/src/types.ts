@@ -17,6 +17,9 @@ export interface CreditCard {
   id: string;
   name: string;
   issuer: string;
+  /** Clean crawler provider slug (e.g. "chase", "capital_one") — used for
+   *  the provider filter; more consistent than the free-text issuer. */
+  provider?: string;
   last4: string;
   gradient: string;
   /** Real card art scraped from the issuer page; the stylized gradient

@@ -74,6 +74,7 @@ export function mapRowToCard(row: CardRow): CreditCard {
     id: row.id,
     name,
     issuer: issuer.toUpperCase(),
+    provider: row.provider,
     last4: last4For(row.url || row.id),
     tags: row.tags && row.tags.length > 0 ? row.tags : ['personal'],
     gradient: gradientFor(issuer),
