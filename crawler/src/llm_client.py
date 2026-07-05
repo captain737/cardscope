@@ -24,6 +24,7 @@ logger = logging.getLogger("llm_client")
 
 _gemini_client = None
 _groq_client = None
+_openai_client = None
 
 
 def _get_gemini_client():
@@ -44,6 +45,16 @@ def _get_groq_client():
             raise RuntimeError("GROQ_API_KEY not set — get a free key at https://console.groq.com/keys")
         _groq_client = Groq(api_key=settings.groq_api_key)
     return _groq_client
+
+
+def _get_openai_client():
+    global _openai_client
+    if _openai_client is None:
+        from openai import OpenAI
+        if not settings.openai_api_key:
+            raise RuntimeError("OPENAI_API_KEY not set — create one at https://platform.openai.com/api-keys")
+        _openai_client = OpenAI(api_key=settings.openai_api_key)
+    return _openai_client
 
 
 def _call_gemini(prompt: str, model: str, max_tokens: int) -> str:
@@ -71,6 +82,18 @@ def _call_groq(prompt: str, model: str, max_tokens: int) -> str:
     return response.choices[0].message.content
 
 
+def _call_openai(prompt: str, model: str, max_tokens: int) -> str:
+    client = _get_openai_client()
+    response = client.chat.completions.create(
+        model=model,
+        max_tokens=max_tokens,
+        temperature=0,
+        response_format={"type": "json_object"},  # guaranteed valid JSON
+        messages=[{"role": "user", "content": prompt}],
+    )
+    return response.choices[0].message.content
+
+
 def complete_json(prompt: str, model: str | None = None, max_tokens: int = 500) -> dict:
     """Sends `prompt` to the configured free LLM provider, expects a JSON
     object back, and returns it parsed. Retries with backoff on rate-limit
@@ -86,8 +109,10 @@ def complete_json(prompt: str, model: str | None = None, max_tokens: int = 500) 
                 raw = _call_gemini(prompt, model, max_tokens)
             elif provider == "groq":
                 raw = _call_groq(prompt, model, max_tokens)
+            elif provider == "openai":
+                raw = _call_openai(prompt, model, max_tokens)
             else:
-                raise ValueError(f"unknown LLM_PROVIDER '{provider}' — expected 'gemini' or 'groq'")
+                raise ValueError(f"unknown LLM_PROVIDER '{provider}' — expected 'gemini', 'groq', or 'openai'")
 
             time.sleep(settings.llm_call_delay_s)  # proactive pacing for free-tier RPM limits
 

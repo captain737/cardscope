@@ -1,6 +1,10 @@
 export interface CardFacts {
   annualFee: string;
   rewards: string;
+  /** LLM-generated rewards bullet points, when the crawler has produced
+   *  them. Absent for mock data and un-reprocessed rows; the UI falls back
+   *  to splitting `rewards` client-side (see lib/rewards.ts). */
+  rewardsBullets?: string[];
   bonus: string;
   apr: string;
   bestFor: string;

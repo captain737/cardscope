@@ -47,14 +47,21 @@ providers:
     # The sitemap index has 125 sub-sitemaps (none card-named) and takes
     # minutes to walk. A one-hop crawl of the cards hub is faster; the LLM
     # classifier sorts product pages from the rest.
+    # The all-cards hub statically lists every consumer card at
+    # /us/credit-cards/card/<name>/ (14 as of 2026-07) — the flagship cards
+    # (Platinum, Gold, Green, Blue Cash) live under /us/, not the /en-us/
+    # sitemap. A one-hop hub crawl finds them all; the LLM sorts product
+    # pages from the rest.
     sitemap: null
-    fallback_hub: https://www.americanexpress.com/us/credit-cards/
-    url_include: ["/credit-cards/"]
-    url_exclude: ["/compare", "/all-cards", "/support", "/benefits-guide", "/credit-cards/$"]
-    # DISABLED 2026-07: Amex's card listing is fully JS-rendered, so the
-    # static-HTML crawl finds zero product links. Needs a headless-browser
-    # discovery path (Playwright) to support — tracked as future work.
-    enabled: false
+    fallback_hub: https://www.americanexpress.com/us/credit-cards/all-cards/
+    url_include: ["/us/credit-cards/card/"]
+    url_exclude: ["/compare", "/all-cards", "/credit-intel"]
+    # Card pages are a JS shell — static HTML has 16 <h1>s (nav/SEO) and no
+    # real content, so classification needs the rendered DOM (2 <h1>s + the
+    # actual card details). The hub links come from static JSON (above), so
+    # only the product pages pay the render cost.
+    render_js: true
+    enabled: true
 
   - name: capital_one
     display_name: Capital One
@@ -105,15 +112,24 @@ providers:
       - "-bonus"
       - "-checks"
       - ".html"
+    # Discover's visible <img> is a lifestyle decoy, but its real flat card
+    # art lives in schema.org JSON-LD in the static HTML (extract_card_image
+    # reads that first) — so no headless render is needed here. render_js is
+    # reserved for issuers that hide product *links* behind JS (Amex/BofA).
+    render_js: false
     enabled: true
 
   - name: bank_of_america
     display_name: Bank of America
     base_url: https://www.bankofamerica.com
+    # SPA hub: product links (/credit-cards/products/<name>/) are injected by
+    # JS, so the hub is rendered to surface them; the card pages likewise
+    # need the rendered DOM to classify.
     sitemap: null
-    fallback_hub: https://www.bankofamerica.com/credit-cards/compare-credit-cards/
-    url_include: ["/credit-cards/"]
-    url_exclude: ["/compare-credit-cards", "/help"]
+    fallback_hub: https://www.bankofamerica.com/credit-cards/
+    url_include: ["/credit-cards/products/"]
+    url_exclude: ["/compare", "/spa-assets", "/module-specific"]
+    render_js: true
     enabled: true
 
   - name: wells_fargo
@@ -128,23 +144,26 @@ providers:
   - name: us_bank
     display_name: U.S. Bank
     base_url: https://www.usbank.com
-    # sitemap.xml is a flat urlset, NOT a sitemap index. Marking it as an
-    # index made discovery try to re-fetch every HTML page as a sub-sitemap
-    # (a runaway crawl that hangs). It's flat.
-    sitemap: https://www.usbank.com/sitemap.xml
-    sitemap_index: false
-    url_include: ["/credit-cards/"]
-    url_exclude: ["/compare", "/learn", "/financial-education", "/financialiq"]
+    # The flat sitemap is flooded with /credit-card-insider/ blog pages that
+    # crowd out the products under the 60-URL cap. The /credit-cards.html hub
+    # instead statically lists the real product pages (/credit-cards/<name>.html).
+    sitemap: null
+    fallback_hub: https://www.usbank.com/credit-cards.html
+    url_include: ['/credit-cards/[a-z0-9-]+\.html$']
+    url_exclude: ["credit-card-insider", "co-branded", "view-all", "/compare", "business-credit-cards"]
+    render_js: true
     enabled: true
 
   - name: barclays
     display_name: Barclays US
     base_url: https://cards.barclaycardus.com
     sitemap: null
-    fallback_hub: https://cards.barclaycardus.com/
-    # 2026: product pages live at /banking/cards/<card-name>/
+    # The homepage only features one card; /banking/cards/ is the full
+    # catalog (27 co-brand cards). Product pages live at /banking/cards/<name>/.
+    fallback_hub: https://cards.barclaycardus.com/banking/cards/
     url_include: ["/banking/cards/"]
     url_exclude: ["/compare", "/banking/cards/$", "/help-center", "/about-us"]
+    render_js: true
     enabled: true
 
   - name: synchrony

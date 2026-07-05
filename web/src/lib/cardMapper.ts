@@ -12,6 +12,7 @@ export interface CardRow {
   annual_fee: number | null;
   apr_range: string | null;
   rewards_summary: string | null;
+  rewards_bullets: string[] | null;
   signup_bonus: string | null;
   recommended_credit_score: string | null;
   foreign_transaction_fee: string | null;
@@ -81,6 +82,7 @@ export function mapRowToCard(row: CardRow): CreditCard {
     facts: {
       annualFee: formatAnnualFee(row.annual_fee),
       rewards: row.rewards_summary || 'See issuer site for rewards details',
+      rewardsBullets: row.rewards_bullets && row.rewards_bullets.length > 0 ? row.rewards_bullets : undefined,
       bonus: row.signup_bonus || 'None',
       apr: row.apr_range || 'See issuer site',
       bestFor: row.best_for || 'Everyday Spend',

@@ -109,17 +109,35 @@ def coarse_filter(urls: list[str], provider: dict) -> list[str]:
 
 def crawl_hub_fallback(hub_url: str, provider: dict) -> list[str]:
     """One-hop crawl for providers without a sitemap: fetch the hub page,
-    pull all same-domain links, then apply the same coarse filter."""
-    resp = _get(hub_url)
-    if resp is None:
+    pull all same-domain links, then apply the same coarse filter.
+
+    For SPA hubs (render_js: true — e.g. Bank of America) the product links
+    only exist after JS runs, so the hub is rendered in a headless browser.
+    Query strings are stripped so campaign-tagged duplicates collapse."""
+    text = None
+    if provider.get("render_js"):
+        from src.render import render_html
+        text = render_html(hub_url)
+    if text is None:
+        resp = _get(hub_url)
+        text = resp.text if resp is not None else None
+    if not text:
         return []
-    soup = BeautifulSoup(resp.text, "html.parser")
+
+    soup = BeautifulSoup(text, "html.parser")
     base_domain = urlparse(provider["base_url"]).netloc
     links = set()
     for a in soup.find_all("a", href=True):
         full = urljoin(provider["base_url"], a["href"])
         if urlparse(full).netloc == base_domain:
-            links.add(full.split("#")[0])
+            links.add(full.split("#")[0].split("?")[0])
+    # Sites that render their card list client-side (e.g. Amex) still ship
+    # the product paths in the page's inline JSON/JS — pull same-site paths
+    # straight from the raw HTML so we don't miss them. Unescape JSON slashes
+    # (\/) first; coarse_filter's url_include narrows this to product pages.
+    raw = text.replace("\\/", "/")
+    for path in re.findall(r"(/[A-Za-z0-9][A-Za-z0-9/_-]*?/credit-cards/[A-Za-z0-9/_-]+/)", raw):
+        links.add(urljoin(provider["base_url"], path))
     return coarse_filter(list(links), provider)
 
 

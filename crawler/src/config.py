@@ -24,12 +24,26 @@ DATA_DIR.mkdir(exist_ok=True)
 LOG_DIR.mkdir(exist_ok=True)
 
 
+def _default_model() -> str:
+    """Sensible default extraction model per provider's tier."""
+    provider = os.getenv("LLM_PROVIDER", "gemini")
+    if provider == "gemini":
+        return "gemini-2.5-flash-lite"
+    if provider == "openai":
+        return "gpt-4o-mini"
+    return "llama-3.3-70b-versatile"  # groq
+
+
 @dataclass
 class Settings:
-    # Which free LLM backend to use: "gemini" or "groq"
+    # Which LLM backend to use: "gemini", "groq", or "openai". Gemini/Groq
+    # have free tiers; OpenAI is paid (pay-as-you-go) and is the best pick for
+    # a one-time high-quality backfill (e.g. gpt-4o-mini, ~$0.30 for a full
+    # crawl) before switching back to a free provider for cheap re-checks.
     llm_provider: str = field(default_factory=lambda: os.getenv("LLM_PROVIDER", "gemini"))
     gemini_api_key: str = field(default_factory=lambda: os.getenv("GEMINI_API_KEY", ""))
     groq_api_key: str = field(default_factory=lambda: os.getenv("GROQ_API_KEY", ""))
+    openai_api_key: str = field(default_factory=lambda: os.getenv("OPENAI_API_KEY", ""))
     slack_webhook_url: Optional[str] = field(default_factory=lambda: os.getenv("SLACK_WEBHOOK_URL"))
 
     # Supabase (Postgres) — when both are set, storage.py publishes accepted
@@ -49,19 +63,21 @@ class Settings:
     )
 
     # classification / extraction models — defaults chosen per provider's free tier
-    classify_model: str = os.getenv(
-        "CLASSIFY_MODEL",
-        "gemini-2.5-flash-lite" if os.getenv("LLM_PROVIDER", "gemini") == "gemini" else "llama-3.3-70b-versatile",
-    )
-    extract_model: str = os.getenv(
-        "EXTRACT_MODEL",
-        "gemini-2.5-flash-lite" if os.getenv("LLM_PROVIDER", "gemini") == "gemini" else "llama-3.3-70b-versatile",
-    )
+    classify_model: str = os.getenv("CLASSIFY_MODEL", _default_model())
+    extract_model: str = os.getenv("EXTRACT_MODEL", _default_model())
     # LLM call pacing — free tiers are rate-limited per minute (e.g. Gemini
     # Flash-Lite: ~15 RPM). This delay is applied between LLM calls specifically,
     # separate from request_delay_s which paces HTTP fetches of issuer pages.
-    llm_call_delay_s: float = float(os.getenv("LLM_CALL_DELAY_S", "4.5"))
+    llm_call_delay_s: float = float(
+        os.getenv("LLM_CALL_DELAY_S", "0.3" if os.getenv("LLM_PROVIDER", "gemini") == "openai" else "4.5")
+    )
     llm_max_retries: int = int(os.getenv("LLM_MAX_RETRIES", "3"))
+
+    # Headless-browser rendering (providers with render_js: true). Optional —
+    # needs `pip install playwright && playwright install chromium`.
+    render_timeout_ms: int = int(os.getenv("RENDER_TIMEOUT_MS", "30000"))
+    render_scroll_steps: int = int(os.getenv("RENDER_SCROLL_STEPS", "8"))
+    render_settle_ms: int = int(os.getenv("RENDER_SETTLE_MS", "1200"))
 
     # validation thresholds
     max_annual_fee: float = 1000.0

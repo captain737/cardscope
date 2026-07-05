@@ -33,12 +33,15 @@ def heuristic_prefilter(html: str) -> bool:
     """Returns True if the page PASSES the cheap filter and should proceed
     to LLM classification. Returns False to reject immediately for free."""
     h1_count, cta_count = count_h1_and_ctas(html)
-    # A single-card page should have exactly one H1 (the card name) and a
-    # small number of "Apply Now" CTAs. Catalog pages tend to have many
-    # of both (one per card listed).
+    # A single-card page should have exactly one H1 (the card name). Catalog
+    # pages tend to have many H1s (one per card listed). The CTA count is a
+    # weak signal — real product pages legitimately repeat "Apply Now" across
+    # hero/sticky/footer (Discover's card pages have 5-6), so the cap is only
+    # a coarse guard against huge listing pages; the LLM classifier is the
+    # real catalog-vs-single-card gate and reliably rejects catalogs.
     if h1_count == 0 or h1_count > 2:
         return False
-    if cta_count > 4:
+    if cta_count > 12:
         return False
     return True
 
@@ -84,7 +87,7 @@ def llm_classify(url: str, text: str) -> ClassificationResult:
         return ClassificationResult(url=url, page_type="other", card_name=None, confidence=0.0)
 
 
-def classify_url(url: str, cached: dict | None = None) -> ClassificationResult:
+def classify_url(url: str, cached: dict | None = None, render: bool = False) -> ClassificationResult:
     """Full classification pipeline for a single URL: fetch -> heuristic
     prefilter -> LLM classification. Returns a result even on rejection
     so callers can log why.
@@ -101,7 +104,7 @@ def classify_url(url: str, cached: dict | None = None) -> ClassificationResult:
             confidence=cached.get("confidence", 1.0),
         )
 
-    html, text = fetch_page(url)
+    html, text = fetch_page(url, render=render)
     if html is None:
         return ClassificationResult(url=url, page_type="other", card_name=None, confidence=0.0)
 
@@ -128,7 +131,7 @@ def classify_url(url: str, cached: dict | None = None) -> ClassificationResult:
     return result
 
 
-def classify_batch(urls: list[str], cache: dict | None = None) -> list[ClassificationResult]:
+def classify_batch(urls: list[str], cache: dict | None = None, render: bool = False) -> list[ClassificationResult]:
     """Classify a list of URLs, returning only confident single_card results.
     Keeps rejected ones out of the return value but logs counts for visibility.
 
@@ -141,7 +144,7 @@ def classify_batch(urls: list[str], cache: dict | None = None) -> list[Classific
     llm_skipped = 0
     for u in urls:
         cached = url_cache.get(u)
-        result = classify_url(u, cached=cached)
+        result = classify_url(u, cached=cached, render=render)
         if cached is not None:
             llm_skipped += 1
         elif cache is not None and result.confidence >= 0.6:

@@ -6,8 +6,9 @@ of this page" logic, so it lives here once rather than being duplicated
 (and drifting) in two places.
 """
 import logging
+import re
 import time
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlsplit, urlunsplit
 
 import requests
 from bs4 import BeautifulSoup
@@ -18,8 +19,21 @@ logger = logging.getLogger("fetch")
 HEADERS = {"User-Agent": settings.user_agent}
 
 
-def fetch_page(url: str) -> tuple[str | None, str | None]:
-    """Returns (raw_html, cleaned_text) or (None, None) on failure."""
+def fetch_page(url: str, render: bool = False) -> tuple[str | None, str | None]:
+    """Returns (raw_html, cleaned_text) or (None, None) on failure.
+
+    When `render` is True (providers flagged render_js), the page is loaded
+    in a headless browser and scrolled so JS-injected / lazy-loaded content
+    (e.g. Discover's card art) is present. Falls back to a static request if
+    rendering is unavailable or fails."""
+    if render:
+        from src.render import render_html
+        html = render_html(url)
+        time.sleep(settings.request_delay_s)  # politeness delay
+        if html:
+            return html, clean_html_to_text(html)
+        logger.warning(f"render returned nothing for {url}; falling back to static fetch")
+
     try:
         resp = requests.get(url, headers=HEADERS, timeout=settings.request_timeout_s)
         resp.raise_for_status()
@@ -54,12 +68,103 @@ _IMAGE_BLOCKLIST = (
     "banner", "array", "logo", "hero", "device", "sphere", "half-sphere",
     "apple", "google-pay", "googlepay", "paypal", "wallet", "icon",
     "angle", "angled", "photo-", "-photo", "lifestyle", "background",
+    "loader", "pixel", "tracking", "spacer", "transparent", "article",
+    "midnav",
 )
 
 
 def _is_bad_asset(src: str) -> bool:
     s = src.lower()
-    return s.split("?")[0].endswith(".svg") or any(term in s for term in _IMAGE_BLOCKLIST)
+    path = urlsplit(s).path
+    return path.endswith((".svg", ".gif")) or any(term in s for term in _IMAGE_BLOCKLIST)
+
+
+def _clean_img_url(src: str) -> str:
+    parts = urlsplit(src.strip())
+    return urlunsplit((parts.scheme, parts.netloc, parts.path, parts.query, ""))
+
+
+def _candidate_img_urls(img) -> list[str]:
+    # Issuers (Discover especially) lazy-load real card art into data-*
+    # attributes while `src` holds a loader.gif/placeholder. Gather every
+    # candidate so the loader can't win by default.
+    urls = []
+    for attr in ("src", "data-src", "data-original", "data-lazy-src"):
+        value = img.get(attr)
+        if value:
+            urls.append(value)
+    for attr in ("srcset", "data-srcset"):
+        value = img.get(attr)
+        if not value:
+            continue
+        for candidate in value.split(","):
+            url = candidate.strip().split(" ")[0]
+            if url:
+                urls.append(url)
+    seen = set()
+    deduped = []
+    for url in urls:
+        cleaned = _clean_img_url(url)
+        if cleaned and cleaned not in seen:
+            seen.add(cleaned)
+            deduped.append(cleaned)
+    return deduped
+
+
+def _dimension_score(src: str) -> int:
+    """Prefer normal landscape card-art dimensions and avoid tiny nav icons."""
+    score = 0
+    for width, height in re.findall(r"(?<!\d)(\d{2,4})[x-](\d{2,4})(?!\d)", src.lower()):
+        w, h = int(width), int(height)
+        if w < 140 or h < 80:
+            score -= 3
+            continue
+        ratio = max(w, h) / min(w, h)
+        if 1.45 <= ratio <= 1.75:
+            score += 3
+        elif ratio > 2.2:
+            score -= 2
+    return score
+
+
+def _is_card_sized(src: str) -> bool:
+    """False when the URL's own dimensions mark it as a thumbnail (tiny) or a
+    clearly non-card shape. URLs without dimensions pass (can't tell)."""
+    dims = re.findall(r"(?<!\d)(\d{2,4})[x-](\d{2,4})(?!\d)", src.lower())
+    if not dims:
+        return True
+    for width, height in dims:
+        w, h = int(width), int(height)
+        longest, shortest = max(w, h), min(w, h)
+        if longest >= 300 and 1.35 <= longest / shortest <= 1.95:
+            return True
+    return False
+
+
+def _jsonld_card_image(soup, page_url: str) -> str | None:
+    """schema.org structured data (<script type=application/ld+json>) names the
+    canonical product image, which issuers keep accurate for search
+    rich-results — the most reliable card-art signal when present. Discover
+    hides its real card art here while the visible <img> is a lifestyle decoy."""
+    import json
+    for tag in soup.find_all("script", attrs={"type": "application/ld+json"}):
+        try:
+            data = json.loads(tag.string or tag.get_text() or "")
+        except (ValueError, TypeError):
+            continue
+        stack = [data]
+        while stack:
+            node = stack.pop()
+            if isinstance(node, dict):
+                for key, val in node.items():
+                    if key in ("image", "contentUrl", "thumbnailUrl") and isinstance(val, str):
+                        if not _is_bad_asset(val) and re.search(r"card[-_]?art", val, re.I):
+                            return urljoin(page_url, val)
+                    elif isinstance(val, (dict, list)):
+                        stack.append(val)
+            elif isinstance(node, list):
+                stack.extend(node)
+    return None
 
 
 def extract_card_image(html: str, page_url: str) -> str | None:
@@ -78,37 +183,45 @@ def extract_card_image(html: str, page_url: str) -> str | None:
     """
     soup = BeautifulSoup(html, "html.parser")
 
+    # 1. schema.org structured data — the canonical, machine-readable image.
+    jsonld = _jsonld_card_image(soup, page_url)
+    if jsonld:
+        return jsonld
+
+    # 2. Score <img> candidates (incl. lazy-load/srcset), dropping thumbnails
+    #    and non-card shapes so a nav thumbnail never wins by default.
     scored: list[tuple[int, str]] = []
-    for img in soup.find_all("img", src=True):
-        src = img["src"]
-        if _is_bad_asset(src):
-            continue
+    for img in soup.find_all("img"):
         alt = (img.get("alt") or "").lower()
-        src_l = src.lower()
-        score = 0
-        if "card-art" in src_l or "card_art" in src_l or "cardart" in src_l:
-            score += 4
-        if "card" in alt:
-            score += 2
-        if "card" in src_l:
-            score += 1
-        if score:
-            scored.append((score, src))
+        for src in _candidate_img_urls(img):
+            if _is_bad_asset(src) or not _is_card_sized(src):
+                continue
+            src_l = src.lower()
+            score = 0
+            if "card-art" in src_l or "card_art" in src_l or "cardart" in src_l:
+                score += 4
+            if "card" in alt:
+                score += 2
+            if "card" in src_l:
+                score += 1
+            score += _dimension_score(src)
+            if score:
+                scored.append((score, src))
 
     if scored and max(s for s, _ in scored) >= 4:
-        best = max(scored, key=lambda t: t[0])[1]
-        return urljoin(page_url, best)
+        return urljoin(page_url, max(scored, key=lambda t: t[0])[1])
 
+    # 3. Social-preview meta as a weak fallback (also size-gated).
     for prop in ("og:image", "twitter:image"):
         tag = soup.find("meta", attrs={"property": prop}) or soup.find("meta", attrs={"name": prop})
         content = tag.get("content") if tag else None
-        if content and not _is_bad_asset(content):
+        if content and not _is_bad_asset(content) and _is_card_sized(content):
             return urljoin(page_url, content)
 
     if scored:
-        best = max(scored, key=lambda t: t[0])[1]
-        return urljoin(page_url, best)
+        return urljoin(page_url, max(scored, key=lambda t: t[0])[1])
 
+    # Nothing card-shaped found — the frontend renders its gradient face.
     return None
 
 

@@ -55,7 +55,7 @@ def run_provider(provider: dict) -> dict:
             return summary
 
         # Stage 3: classification (filters down to confirmed single-card pages)
-        classified = classify_batch(urls, cache=cache)
+        classified = classify_batch(urls, cache=cache, render=provider.get("render_js", False))
         summary["classified"] = len(classified)
         if not classified:
             summary["error"] = "zero pages classified as single_card — site may have changed structure"

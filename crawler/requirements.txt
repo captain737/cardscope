@@ -3,10 +3,17 @@ beautifulsoup4>=4.12.0
 PyYAML>=6.0
 python-dotenv>=1.0.0
 
-# LLM providers -- install whichever you're using (or both).
-# Default is Gemini (LLM_PROVIDER=gemini in .env).
+# LLM providers -- install whichever you're using (any/all).
+# Default is Gemini (LLM_PROVIDER=gemini in .env). OpenAI (paid) is best for
+# a one-time high-quality backfill; Gemini/Groq for cheap ongoing re-checks.
 google-genai>=0.3.0
 groq>=0.11.0
+openai>=1.40.0
 
 # Database -- only used when SUPABASE_URL/SUPABASE_SERVICE_KEY are set.
 supabase>=2.9.0
+
+# Headless-browser rendering -- only for providers with render_js: true
+# (JS-injected card art / product links, e.g. Discover). After installing,
+# run: playwright install chromium
+playwright>=1.40.0

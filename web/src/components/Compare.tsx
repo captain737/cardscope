@@ -4,6 +4,14 @@ import { X, Search, Shuffle, Wallet, Bookmark, Check, Minus, ArrowUpRight, Plus 
 import { useCards } from '../hooks/useCards';
 import CardVisual from './CardVisual';
 import { CreditCard } from '../types';
+import { rewardBullets } from '../lib/rewards';
+
+// Prefer the crawler's LLM bullets when present; otherwise split the prose.
+function rewardsList(card: CreditCard): string[] {
+  return card.facts.rewardsBullets && card.facts.rewardsBullets.length > 0
+    ? card.facts.rewardsBullets
+    : rewardBullets(card.facts.rewards);
+}
 
 interface CompareProps {
   watchlist: string[];
@@ -380,7 +388,7 @@ function CompareColumn({
 
       {/* Detail spec list */}
       <dl className="mt-8 border-t border-[var(--cl-hairline)]">
-        <SpecRow label="Rewards" value={card.facts.rewards} />
+        <SpecRow label="Rewards" value={card.facts.rewards} bullets={rewardsList(card)} />
         <SpecRow label="Sign-up bonus" value={card.facts.bonus} />
         <SpecRow label="APR" value={card.facts.apr} />
         <SpecRow label="Foreign fee" value={card.facts.foreignFee} />
@@ -442,12 +450,24 @@ function ParityIcon({ state }: { state: Tri }) {
   return <Minus className="w-[18px] h-[18px] shrink-0 text-[var(--cl-hairline-strong)]" strokeWidth={2.5} />;
 }
 
-function SpecRow({ label, value }: { label: string; value: string }) {
+function SpecRow({ label, value, bullets }: { label: string; value: string; bullets?: string[] }) {
+  const showBullets = bullets && bullets.length >= 2;
   return (
     <div className="flex justify-between gap-6 py-3.5 border-b border-[var(--cl-hairline)] last:border-b-0">
       <dt className="shrink-0 pt-0.5 text-[13px] text-[var(--cl-muted)]">{label}</dt>
-      <dd className="max-w-[62%] text-right text-[14px] leading-relaxed text-[var(--cl-ink)] [overflow-wrap:anywhere]">
-        {value}
+      <dd className="max-w-[64%] text-right text-[14px] leading-relaxed text-[var(--cl-ink)] [overflow-wrap:anywhere]">
+        {showBullets ? (
+          <ul className="flex flex-col gap-1.5 text-left">
+            {bullets!.map((b, i) => (
+              <li key={i} className="flex gap-2">
+                <span aria-hidden className="mt-[0.5em] h-1 w-1 rounded-full bg-[var(--cl-gold)] shrink-0" />
+                <span>{b}</span>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          value
+        )}
       </dd>
     </div>
   );

@@ -2,6 +2,7 @@ import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import { CreditCard as CreditCardType } from '../types';
 import { ArrowUpRight, Plus, X } from 'lucide-react';
 import { Dispatch, SetStateAction } from 'react';
+import { rewardBullets } from '../lib/rewards';
 
 interface CardFactsProps {
   card: CreditCardType;
@@ -17,6 +18,10 @@ interface CardFactsProps {
 export default function CardFacts({ card, watchlist, setWatchlist }: CardFactsProps) {
   const onWatchlist = watchlist.includes(card.id);
   const reducedMotion = useReducedMotion();
+  // Prefer the crawler's LLM bullets when present; otherwise split the prose.
+  const rewardsBullets = card.facts.rewardsBullets && card.facts.rewardsBullets.length > 0
+    ? card.facts.rewardsBullets
+    : rewardBullets(card.facts.rewards);
 
   const cells: Array<{ label: string; value: string } | 'center'> = [
     { label: 'Annual Fee', value: card.facts.annualFee },
@@ -94,7 +99,18 @@ export default function CardFacts({ card, watchlist, setWatchlist }: CardFactsPr
             return (
               <div key={cell.label} className={`${lines} flex flex-col items-center justify-center text-center gap-2 p-5 md:p-6 min-h-[150px] md:min-h-[170px]`}>
                 <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--cl-muted)]">{cell.label}</span>
-                <p className="text-sm md:text-base font-medium text-[var(--cl-ink)] leading-relaxed max-w-[60ch] [overflow-wrap:anywhere]">{cell.value}</p>
+                {cell.label === 'Rewards' && rewardsBullets.length >= 2 ? (
+                  <ul className="flex flex-col gap-1.5 text-left max-w-[46ch]">
+                    {rewardsBullets.map((b, i) => (
+                      <li key={i} className="flex gap-2 text-sm md:text-base font-medium text-[var(--cl-ink)] leading-relaxed">
+                        <span aria-hidden className="mt-[0.5em] h-1 w-1 rounded-full bg-[var(--cl-gold)] shrink-0" />
+                        <span>{b}</span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-sm md:text-base font-medium text-[var(--cl-ink)] leading-relaxed max-w-[60ch] [overflow-wrap:anywhere]">{cell.value}</p>
+                )}
               </div>
             );
           })}
