@@ -98,7 +98,7 @@ export default function App() {
       </main>
 
       <footer className="border-t border-[var(--cl-hairline)] py-12 text-center text-[var(--cl-muted)] text-sm">
-        <p>© 2026 CardScope.</p>
+        <p>© 2026 Card Fit.</p>
       </footer>
 
       <FindMyCard open={findOpen} onClose={() => setFindOpen(false)} onComplete={handleComplete} />

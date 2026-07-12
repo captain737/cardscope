@@ -29,12 +29,10 @@ export default function Navigation({ currentPage, setCurrentPage, findActive, on
       <button
         onClick={() => setCurrentPage('home')}
         className="pointer-events-auto flex items-center gap-2 group"
-        aria-label="CardScope home"
+        aria-label="Card Fit home"
       >
-        <div className="w-8 h-8 rounded-lg bg-surface/90 backdrop-blur-sm border border-border flex items-center justify-center group-hover:border-primary/50 transition-colors duration-300">
-          <Layers className="w-4 h-4 text-primary" />
-        </div>
-        <span className="font-display font-bold text-lg tracking-tight text-ink hidden sm:inline">CardScope</span>
+        <Layers className="w-5 h-5 text-primary transition-transform duration-300 group-hover:scale-110" />
+        <span className="font-display font-bold text-lg tracking-tight text-primary">Card Fit</span>
       </button>
 
       <nav className="pointer-events-auto flex items-center gap-1 p-1 rounded-full bg-surface/90 backdrop-blur-sm border border-border">
