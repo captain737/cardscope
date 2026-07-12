@@ -6,7 +6,12 @@ export interface CardFacts {
    *  to splitting `rewards` client-side (see lib/rewards.ts). */
   rewardsBullets?: string[];
   bonus: string;
+  /** Full APR statement (legacy / fallback). Prefer the split fields. */
   apr: string;
+  /** Introductory/promotional APR, when the card has one. */
+  aprIntro?: string;
+  /** Ongoing/standard APR. Falls back to `apr` for un-recrawled rows. */
+  aprRegular?: string;
   bestFor: string;
   creditNeeded: string;
   foreignFee: string;

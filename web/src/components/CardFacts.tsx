@@ -2,7 +2,8 @@ import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import { CreditCard as CreditCardType } from '../types';
 import { ArrowUpRight, Plus, X } from 'lucide-react';
 import { Dispatch, SetStateAction } from 'react';
-import { rewardBullets } from '../lib/rewards';
+import { cardRewardBullets, leadWithNumber, topPerkDisplay } from '../lib/rewards';
+import { aprSections } from '../lib/apr';
 
 interface CardFactsProps {
   card: CreditCardType;
@@ -18,21 +19,21 @@ interface CardFactsProps {
 export default function CardFacts({ card, watchlist, setWatchlist }: CardFactsProps) {
   const onWatchlist = watchlist.includes(card.id);
   const reducedMotion = useReducedMotion();
-  // Prefer the crawler's LLM bullets when present; otherwise split the prose.
-  const rewardsBullets = card.facts.rewardsBullets && card.facts.rewardsBullets.length > 0
-    ? card.facts.rewardsBullets
-    : rewardBullets(card.facts.rewards);
+  // Rewards render as bullets whenever there's real data (hard rule), each
+  // leading with its rate; [] means placeholder text, shown as prose.
+  const rewardsBullets = cardRewardBullets(card.facts);
+  const apr = aprSections(card.facts);
 
   const cells: Array<{ label: string; value: string } | 'center'> = [
     { label: 'Annual Fee', value: card.facts.annualFee },
     { label: 'Rewards', value: card.facts.rewards },
-    { label: 'Sign-up Bonus', value: card.facts.bonus },
+    { label: 'Sign-up Bonus', value: leadWithNumber(card.facts.bonus) },
     { label: 'APR', value: card.facts.apr },
     'center',
     { label: 'Best For', value: card.facts.bestFor },
     { label: 'Credit Needed', value: card.facts.creditNeeded },
     { label: 'Foreign Fee', value: card.facts.foreignFee },
-    { label: 'Top Perk', value: card.facts.topPerk },
+    { label: 'Top Perk', value: topPerkDisplay(card.facts) },
   ];
 
   return (
@@ -99,7 +100,7 @@ export default function CardFacts({ card, watchlist, setWatchlist }: CardFactsPr
             return (
               <div key={cell.label} className={`${lines} flex flex-col items-center justify-center text-center gap-2 p-5 md:p-6 min-h-[150px] md:min-h-[170px]`}>
                 <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--cl-muted)]">{cell.label}</span>
-                {cell.label === 'Rewards' && rewardsBullets.length >= 2 ? (
+                {cell.label === 'Rewards' && rewardsBullets.length >= 1 ? (
                   <ul className="flex flex-col gap-1.5 text-left max-w-[46ch]">
                     {rewardsBullets.map((b, i) => (
                       <li key={i} className="flex gap-2 text-sm md:text-base font-medium text-[var(--cl-ink)] leading-relaxed">
@@ -108,6 +109,15 @@ export default function CardFacts({ card, watchlist, setWatchlist }: CardFactsPr
                       </li>
                     ))}
                   </ul>
+                ) : cell.label === 'APR' && apr.length > 0 ? (
+                  <dl className="flex flex-col gap-1.5 text-left max-w-[46ch]">
+                    {apr.map((s) => (
+                      <div key={s.label} className="flex gap-2 text-sm md:text-base leading-snug">
+                        <dt className="font-semibold uppercase tracking-wide text-[var(--cl-muted)] shrink-0">{s.label}:</dt>
+                        <dd className="font-medium text-[var(--cl-ink)]">{s.value}</dd>
+                      </div>
+                    ))}
+                  </dl>
                 ) : (
                   <p className="text-sm md:text-base font-medium text-[var(--cl-ink)] leading-relaxed max-w-[60ch] [overflow-wrap:anywhere]">{cell.value}</p>
                 )}

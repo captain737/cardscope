@@ -52,7 +52,8 @@ def validate_card(new: CardData, previous: dict | None) -> ValidationResult:
         if not (0 <= new.annual_fee <= settings.max_annual_fee):
             return ValidationResult(False, f"annual_fee {new.annual_fee} out of plausible range", flags)
 
-    apr_high = _parse_apr_high(new.apr_range)
+    # Plausibility is about the ongoing APR; an intro "0%" shouldn't skew it.
+    apr_high = _parse_apr_high(new.apr_regular or new.apr_range)
     if apr_high is not None:
         if not (settings.min_apr <= apr_high <= settings.max_apr):
             return ValidationResult(False, f"apr {apr_high}% out of plausible range", flags)
@@ -78,7 +79,7 @@ def validate_card(new: CardData, previous: dict | None) -> ValidationResult:
             if prev_fee > 0 and abs(new.annual_fee - prev_fee) / prev_fee > 0.5:
                 flags.append(f"annual_fee changed {prev_fee} -> {new.annual_fee} (>50% swing)")
 
-        prev_apr_high = _parse_apr_high(previous.get("apr_range"))
+        prev_apr_high = _parse_apr_high(previous.get("apr_regular") or previous.get("apr_range"))
         if prev_apr_high and apr_high and abs(apr_high - prev_apr_high) > 8:
             flags.append(f"apr high-end changed {prev_apr_high}% -> {apr_high}% (>8pt swing)")
 

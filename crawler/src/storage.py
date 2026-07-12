@@ -129,6 +129,8 @@ def _publish_to_supabase(provider_name: str, accepted_records: list[dict]) -> No
             "issuer": record.get("issuer"),
             "annual_fee": record.get("annual_fee"),
             "apr_range": record.get("apr_range"),
+            "apr_intro": record.get("apr_intro"),
+            "apr_regular": record.get("apr_regular"),
             "rewards_summary": record.get("rewards_summary"),
             "signup_bonus": record.get("signup_bonus"),
             "recommended_credit_score": record.get("recommended_credit_score"),

@@ -25,8 +25,6 @@ TAG_KEYWORDS: dict[str, list[str]] = {
     "balance": ["balance transfer"],
 }
 
-PREMIUM_KEYWORDS = ["reserve", "platinum", "black", "prestige", "signature", "infinite"]
-
 BEST_FOR_LABELS: dict[str, str] = {
     "premium": "Luxury Travel & Perks",
     "lounge": "Frequent Flyers",
@@ -73,7 +71,10 @@ def infer_tags(record: dict) -> list[str]:
     if annual_fee is not None and annual_fee == 0:
         tags.append("no-fee")
 
-    if (annual_fee is not None and annual_fee >= 400) or _matches_any(haystack, PREMIUM_KEYWORDS):
+    # Premium is the exact complement of no-fee: any confirmed annual fee.
+    # (The frontend checks the real fee too — ranking.ts isPremium — so
+    # this tag is presentation metadata, not the filter's source of truth.)
+    if annual_fee is not None and annual_fee > 0:
         tags.append("premium")
 
     apr_range = record.get("apr_range") or ""

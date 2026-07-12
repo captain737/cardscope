@@ -21,33 +21,49 @@ type Answers = {
   credit?: string;
   type?: string;
   rewards?: string;
-  maxFee: number;
-  spend: Record<string, number>; // 0 a little, 1 some, 2 a lot
+  maxFee: number;                 // exact dollar cutoff — one of FEE_STOPS
+  spend: Record<string, number>;  // dollars/month per category
 };
 
+// PRD §13.4 recommended annual-fee slider stops. The last is shown as "$695+".
+const FEE_STOPS = [0, 49, 95, 150, 250, 395, 550, 695];
+
+// Real monthly-dollar spend categories. Keys line up with the recommender's
+// UserProfile.monthlySpend (ranking.ts → matchResultToUser).
 const SPEND_CATS = [
-  { key: 'dining', label: 'Dining & Takeout' },
+  { key: 'dining', label: 'Dining & takeout' },
   { key: 'groceries', label: 'Groceries' },
-  { key: 'travel', label: 'Flights & Hotels' },
-  { key: 'gas', label: 'Gas & Transit' },
+  { key: 'gas', label: 'Gas & transit' },
+  { key: 'travel', label: 'Travel' },
+  { key: 'general', label: 'Everything else' },
 ];
+const SPEND_MAX = 2000; // slider ceiling per category ($/mo)
 
 const BLANK: Answers = {
   firstName: '', lastName: '', email: '',
-  ownedCards: [], maxFee: 0,
-  spend: { dining: 1, groceries: 1, travel: 1, gas: 1 },
+  ownedCards: [], maxFee: 95, // PRD default for a general cash-back user
+  spend: { dining: 300, groceries: 400, gas: 150, travel: 150, general: 800 },
 };
 
 function deriveFilters(a: Answers): string[] {
   const ids: string[] = [];
   if (a.type) ids.push(a.type);
   if (a.rewards === 'cashback') ids.push('cashback');
-  if (a.rewards === 'points') ids.push('travel');
+  if (a.rewards === 'points') ids.push('rewards');
+  // The fee is a hard *maximum*, never a floor — a $0 cap targets no-fee
+  // cards; any higher cap is passed to the recommender as a cutoff, not a
+  // push toward premium (PRD §13, §28).
   if (a.maxFee === 0) ids.push('no-fee');
-  else if (a.maxFee >= 250) ids.push('premium');
-  const spendGoal: Record<string, string> = { dining: 'dining', groceries: 'groceries', travel: 'travel', gas: 'gas' };
-  const top = Object.entries(a.spend).sort((x, y) => y[1] - x[1])[0];
-  if (top && top[1] >= 2 && spendGoal[top[0]]) ids.push(spendGoal[top[0]]);
+  // Heaviest specific spend category becomes a soft ordering hint (dollars).
+  const spendGoal: Record<string, string> = { dining: 'dining', groceries: 'groceries', gas: 'gas' };
+  const cats = ['dining', 'groceries', 'gas', 'travel'] as const;
+  const top = cats.map((k) => [k, a.spend[k] ?? 0] as const).sort((x, y) => y[1] - x[1])[0];
+  if (top && top[1] >= 400) {
+    if (spendGoal[top[0]]) ids.push(spendGoal[top[0]]);
+    // Heavy travel spend suggests a points card — but never override an
+    // explicit cash-back preference (the currencies are strict categories).
+    else if (top[0] === 'travel' && a.rewards !== 'cashback') ids.push('rewards');
+  }
   return normalizeFilters([...new Set(ids)]);
 }
 
@@ -406,24 +422,48 @@ function RewardsStep({ answers, set }: StepProps) {
   );
 }
 
+function RangeSlider({ value, min = 0, max, step = 1, onChange, ariaLabel }: {
+  value: number; min?: number; max: number; step?: number; onChange: (v: number) => void; ariaLabel: string;
+}) {
+  const pct = max > min ? ((value - min) / (max - min)) * 100 : 0;
+  return (
+    <div className="relative w-full h-1.5 bg-[var(--cl-hairline)] rounded-full">
+      <div className="absolute top-0 left-0 h-full bg-[var(--cl-pill)] rounded-full" style={{ width: `${pct}%` }}>
+        <div className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 w-4 h-4 bg-[var(--cl-ink)] rounded-full border-2 border-[var(--cl-bg)] shadow-md" />
+      </div>
+      <input
+        type="range" min={min} max={max} step={step} value={value}
+        onChange={e => onChange(parseInt(e.target.value))}
+        className="absolute inset-0 w-full opacity-0 cursor-pointer z-10"
+        aria-label={ariaLabel}
+      />
+    </div>
+  );
+}
+
 function FeeStep({ answers, set }: StepProps) {
+  // The slider moves between discrete PRD stops, not a continuous range.
+  const idx = Math.max(0, FEE_STOPS.indexOf(answers.maxFee));
+  const isMax = answers.maxFee >= FEE_STOPS[FEE_STOPS.length - 1];
   return (
     <div className="w-full flex flex-col items-center">
-      <Heading title="What's your max annual fee?" />
+      <Heading title="Maximum annual fee I'm willing to pay" hint="We'll only recommend cards at or below this annual fee." />
       <div className="w-full max-w-md">
-        <div className="font-display font-bold text-5xl text-[var(--cl-ink)] mb-6">${answers.maxFee}</div>
-        <div className="relative w-full h-1.5 bg-[var(--cl-hairline)] rounded-full mb-2">
-          <div className="absolute top-0 left-0 h-full bg-[var(--cl-pill)] rounded-full" style={{ width: `${(answers.maxFee / 700) * 100}%` }}>
-            <div className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 w-4 h-4 bg-[var(--cl-ink)] rounded-full border-2 border-[var(--cl-bg)] shadow-md" />
-          </div>
-          <input
-            type="range" min="0" max="700" step="50" value={answers.maxFee}
-            onChange={e => set({ maxFee: parseInt(e.target.value) })}
-            className="absolute inset-0 w-full opacity-0 cursor-pointer z-10"
-            aria-label="Maximum annual fee"
-          />
+        <div className="font-display font-bold text-5xl text-[var(--cl-ink)] mb-6">${answers.maxFee}{isMax ? '+' : ''}</div>
+        <RangeSlider
+          value={idx}
+          max={FEE_STOPS.length - 1}
+          onChange={i => set({ maxFee: FEE_STOPS[i] })}
+          ariaLabel="Maximum annual fee"
+        />
+        <div className="flex justify-between mt-3 px-0.5">
+          {FEE_STOPS.map((f, i) => (
+            <span key={f} className={`text-[10px] tabular-nums ${i === idx ? 'text-[var(--cl-ink)] font-semibold' : 'text-[var(--cl-muted)]'}`}>
+              {f === FEE_STOPS[FEE_STOPS.length - 1] ? `${f}+` : f}
+            </span>
+          ))}
         </div>
-        <p className="text-[var(--cl-muted)] text-sm mt-4">{answers.maxFee === 0 ? 'Targeting cards with no annual fee' : 'Open to a fee for better perks'}</p>
+        <p className="text-[var(--cl-muted)] text-sm mt-5">{answers.maxFee === 0 ? 'Targeting cards with no annual fee' : 'Cards above this fee are shown separately, never mixed in'}</p>
       </div>
     </div>
   );
@@ -432,25 +472,27 @@ function FeeStep({ answers, set }: StepProps) {
 function SpendStep({ answers, set }: StepProps) {
   return (
     <div className="w-full flex flex-col items-center">
-      <Heading title="Where does your money go?" hint="Set how much you spend in each." />
-      <div className="flex flex-col w-full max-w-md">
-        {SPEND_CATS.map(cat => (
-          <div key={cat.key} className="flex flex-col sm:flex-row sm:items-center gap-3 py-4 border-b border-[var(--cl-hairline)] last:border-b-0">
-            <span className="font-medium text-[var(--cl-ink)] text-[15px] flex-1 text-center sm:text-left">{cat.label}</span>
-            <div className="flex gap-1 bg-[var(--cl-panel)] rounded-full p-1 border border-[var(--cl-hairline-strong)] mx-auto sm:mx-0" role="group" aria-label={`${cat.label} spending`}>
-              {['A little', 'Some', 'A lot'].map((lbl, i) => (
-                <button
-                  key={lbl}
-                  onClick={() => set({ spend: { ...answers.spend, [cat.key]: i } })}
-                  aria-pressed={answers.spend[cat.key] === i}
-                  className={`px-3.5 py-1.5 rounded-full text-xs font-medium transition-colors ${answers.spend[cat.key] === i ? 'bg-[var(--cl-pill)] text-[var(--cl-pill-ink)]' : 'text-[var(--cl-muted)] hover:text-[var(--cl-ink)]'}`}
-                >
-                  {lbl}
-                </button>
-              ))}
+      <Heading title="Roughly, how much do you spend each month?" hint="Drag to set your typical monthly spend. This is how we rank cards for your wallet." />
+      <div className="flex flex-col w-full max-w-md gap-1">
+        {SPEND_CATS.map(cat => {
+          const val = answers.spend[cat.key] ?? 0;
+          const isMax = val >= SPEND_MAX;
+          return (
+            <div key={cat.key} className="py-3.5 border-b border-[var(--cl-hairline)] last:border-b-0">
+              <div className="flex items-baseline justify-between mb-2.5">
+                <span className="font-medium text-[var(--cl-ink)] text-[15px]">{cat.label}</span>
+                <span className="font-display font-semibold text-[var(--cl-ink)] tabular-nums">${val}{isMax ? '+' : ''}<span className="text-[var(--cl-muted)] text-xs font-normal">/mo</span></span>
+              </div>
+              <RangeSlider
+                value={val}
+                max={SPEND_MAX}
+                step={50}
+                onChange={v => set({ spend: { ...answers.spend, [cat.key]: v } })}
+                ariaLabel={`${cat.label} monthly spend`}
+              />
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

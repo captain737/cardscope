@@ -6,16 +6,22 @@
 //   account  — who the card is for. Mutually exclusive: exactly one, or
 //              none. Personal / Business / Student are one field, not
 //              three independent toggles.
-//   goal     — what you want out of the card. Multi-select.
-//   quality  — a property of the card itself. Multi-select, with a couple
-//              of natural conflicts (a Premium card is never No Annual Fee).
+//   reward   — the strict reward currencies. Rewards (points/miles) vs
+//              Cash Back: a card earns one or the other, never surfaced
+//              across the line.
+//   spend    — secondary spend refinements (dining / groceries / gas /
+//              balance transfer) within the main results. Multi-select.
+//   quality  — a property of the card itself. Premium means the card
+//              charges any annual fee at all — the exact complement of
+//              No Annual Fee, which is why the two conflict.
 //
 // `matchTags` maps a user-facing filter onto the raw tags the crawler
-// produces (src/tagging.py). This is why "Travel" alone is offered instead
-// of Flights + Hotels + Lounge: those are all travel signals, so Travel
-// matches any of them. Lounge access is also a Premium signal.
+// produces (src/tagging.py). For the reward currencies the parsed rewards
+// prose (lib/perks.ts) is authoritative; these tags are the fallback for
+// cards whose prose doesn't parse. "Rewards" carries the travel-family
+// tags because points/miles cards are the travel-tagged ones.
 
-export type FilterGroup = 'account' | 'goal' | 'quality';
+export type FilterGroup = 'account' | 'reward' | 'spend' | 'quality';
 
 export interface FilterDef {
   id: string;
@@ -30,15 +36,18 @@ export const FILTERS: FilterDef[] = [
   { id: 'business', label: 'Business', group: 'account', matchTags: ['business'] },
   { id: 'students', label: 'Student', group: 'account', matchTags: ['students'] },
 
-  // Goal — what you want back. Multi-select.
-  { id: 'travel', label: 'Travel', group: 'goal', matchTags: ['travel', 'flights', 'hotels', 'lounge'] },
-  { id: 'cashback', label: 'Cash Back', group: 'goal', matchTags: ['cashback'] },
-  { id: 'dining', label: 'Dining', group: 'goal', matchTags: ['dining'] },
-  { id: 'groceries', label: 'Groceries', group: 'goal', matchTags: ['groceries'] },
-  { id: 'gas', label: 'Gas', group: 'goal', matchTags: ['gas'] },
-  { id: 'balance', label: 'Balance Transfer', group: 'goal', matchTags: ['balance'] },
+  // Reward currency — what the card pays out in.
+  { id: 'rewards', label: 'Rewards', group: 'reward', matchTags: ['travel', 'flights', 'hotels', 'lounge'] },
+  { id: 'cashback', label: 'Cash Back', group: 'reward', matchTags: ['cashback'] },
 
-  // Quality — property of the card. Multi-select.
+  // Spend — secondary refinements. Multi-select.
+  { id: 'dining', label: 'Dining', group: 'spend', matchTags: ['dining'] },
+  { id: 'groceries', label: 'Groceries', group: 'spend', matchTags: ['groceries'] },
+  { id: 'gas', label: 'Gas', group: 'spend', matchTags: ['gas'] },
+  { id: 'balance', label: 'Balance Transfer', group: 'spend', matchTags: ['balance'] },
+
+  // Quality — property of the card. Premium/No Annual Fee are checked
+  // against the card's real fee in ranking.ts, not these tags.
   { id: 'no-fee', label: 'No Annual Fee', group: 'quality', matchTags: ['no-fee'] },
   { id: 'premium', label: 'Premium', group: 'quality', matchTags: ['premium', 'lounge'] },
 ];

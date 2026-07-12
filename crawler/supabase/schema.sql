@@ -30,6 +30,8 @@ create table if not exists cards (
   issuer                    text,
   annual_fee                numeric,
   apr_range                 text,
+  apr_intro                 text,
+  apr_regular               text,
   rewards_summary           text,
   signup_bonus              text,
   recommended_credit_score  text,
@@ -47,6 +49,11 @@ create table if not exists cards (
   created_at                timestamptz not null default now(),
   updated_at                timestamptz not null default now()
 );
+
+-- Migrations for columns added after the initial create (safe to re-run;
+-- `create table if not exists` above won't alter an existing table).
+alter table cards add column if not exists apr_intro text;
+alter table cards add column if not exists apr_regular text;
 
 create index if not exists cards_provider_idx on cards (provider);
 create index if not exists cards_is_active_idx on cards (is_active);

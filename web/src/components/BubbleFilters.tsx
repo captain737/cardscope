@@ -6,7 +6,7 @@ interface BubbleFiltersProps {
   onFiltersChange?: (filters: string[]) => void;
 }
 
-const GROUP_ORDER: Array<'account' | 'goal' | 'quality'> = ['account', 'goal', 'quality'];
+const GROUP_ORDER: Array<'account' | 'reward' | 'spend' | 'quality'> = ['account', 'reward', 'spend', 'quality'];
 
 export default function BubbleFilters({ activeFilters, onFiltersChange }: BubbleFiltersProps) {
   const handleToggle = (id: string) => {

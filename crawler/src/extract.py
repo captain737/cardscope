@@ -25,6 +25,8 @@ REQUIRED_FIELDS = [
     "issuer",
     "annual_fee",
     "apr_range",
+    "apr_intro",
+    "apr_regular",
     "rewards_summary",
     "signup_bonus",
     "recommended_credit_score",
@@ -39,7 +41,11 @@ class CardData:
     card_name: Optional[str] = None
     issuer: Optional[str] = None
     annual_fee: Optional[float] = None
+    # apr_range: the whole APR statement as one string (legacy / overall).
+    # apr_intro / apr_regular split it into the two subsections the UI shows.
     apr_range: Optional[str] = None
+    apr_intro: Optional[str] = None
+    apr_regular: Optional[str] = None
     rewards_summary: Optional[str] = None
     signup_bonus: Optional[str] = None
     recommended_credit_score: Optional[str] = None
@@ -62,7 +68,9 @@ Fields required (use null if not clearly stated on the page — do NOT guess or 
 - card_name: exact product name
 - issuer: the bank/company issuing this card
 - annual_fee: number in USD, or 0 if explicitly no annual fee, or null if unclear
-- apr_range: string as stated on page, e.g. "19.99%-28.99% Variable"
+- apr_range: the full APR statement as one string, e.g. "0% intro APR for 15 months, then 19.99%-28.99% Variable"
+- apr_intro: ONLY the introductory/promotional APR offer, e.g. "0% for the first 15 months on purchases and balance transfers". If the page clearly states there is NO intro APR offer, return "None". Return null only if the page doesn't mention intro APR at all.
+- apr_regular: ONLY the ongoing/standard APR that applies after any intro period, e.g. "19.99%-28.99% Variable". This is the normal APR; null only if not stated.
 - rewards_summary: 1-2 sentence summary of the rewards structure
 - signup_bonus: description of any welcome/signup bonus offer, or null
 - recommended_credit_score: e.g. "Good/Excellent", "Excellent", or null
@@ -74,8 +82,41 @@ Page content:
 ---
 
 Respond with ONLY a JSON object matching exactly these keys, no other text:
-{{"card_name": ..., "issuer": ..., "annual_fee": ..., "apr_range": ..., "rewards_summary": ..., "signup_bonus": ..., "recommended_credit_score": ..., "foreign_transaction_fee": ..., "confidence": <0.0-1.0, your own confidence in this extraction>}}
+{{"card_name": ..., "issuer": ..., "annual_fee": ..., "apr_range": ..., "apr_intro": ..., "apr_regular": ..., "rewards_summary": ..., "signup_bonus": ..., "recommended_credit_score": ..., "foreign_transaction_fee": ..., "confidence": <0.0-1.0, your own confidence in this extraction>}}
 """
+
+
+APR_PROMPT = """From this credit card webpage, extract ONLY the APR details as JSON.
+
+URL: {url}
+
+- apr_intro: the introductory/promotional APR offer exactly as stated, e.g. "0% for the first 15 months on purchases and balance transfers". If the page clearly states there is NO intro APR offer, return "None". Return null only if the page doesn't mention intro APR at all.
+- apr_regular: the ongoing/standard APR that applies after any intro period, e.g. "19.24%-29.99% Variable". null if not stated.
+- apr_range: the full APR statement as one string (intro + regular combined as written).
+
+Page content:
+---
+{text}
+---
+
+Respond with ONLY this JSON object, no other text:
+{{"apr_intro": ..., "apr_regular": ..., "apr_range": ...}}
+"""
+
+
+def extract_apr_only(url: str, text: str) -> dict:
+    """Focused, cheap extraction of just the APR fields — used by the APR
+    refresh script so we don't re-run full card extraction. Returns a dict
+    with apr_intro / apr_regular / apr_range (any may be None)."""
+    parsed = complete_json(
+        APR_PROMPT.format(url=url, text=text[:6000]),
+        model=settings.extract_model,
+        max_tokens=200,
+    )
+    out = {k: parsed.get(k) for k in ("apr_intro", "apr_regular", "apr_range")}
+    if not out.get("apr_regular"):
+        out["apr_regular"] = out.get("apr_range")
+    return out
 
 
 def llm_extract(url: str, text: str, provider_name: str) -> CardData:
@@ -92,6 +133,11 @@ def llm_extract(url: str, text: str, provider_name: str) -> CardData:
         # particular sometimes return "$0" or "0" as a string. Coerce here
         # so a type slip from one provider can't crash validate.py later.
         fields["annual_fee"] = _parse_dollar(fields["annual_fee"]) if isinstance(fields["annual_fee"], str) else fields["annual_fee"]
+        # The ongoing APR is the subsection users always expect to see; if the
+        # model split out only the intro (or nothing), fall back to the full
+        # statement so apr_regular is never emptier than apr_range.
+        if not fields.get("apr_regular"):
+            fields["apr_regular"] = fields.get("apr_range")
         return CardData(
             url=url,
             provider=provider_name,
@@ -158,6 +204,7 @@ def extract_card_data(url: str, html: str, text: str, provider_name: str) -> Car
         merged["extraction_method"] = "selector+llm"
         return CardData(**{k: merged[k] for k in [
             "url", "provider", "card_name", "issuer", "annual_fee", "apr_range",
+            "apr_intro", "apr_regular",
             "rewards_summary", "signup_bonus", "recommended_credit_score",
             "foreign_transaction_fee", "extraction_method", "extraction_confidence"
         ]})

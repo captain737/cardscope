@@ -4,14 +4,8 @@ import { X, Search, Shuffle, Wallet, Bookmark, Check, Minus, ArrowUpRight, Plus 
 import { useCards } from '../hooks/useCards';
 import CardVisual from './CardVisual';
 import { CreditCard } from '../types';
-import { rewardBullets } from '../lib/rewards';
-
-// Prefer the crawler's LLM bullets when present; otherwise split the prose.
-function rewardsList(card: CreditCard): string[] {
-  return card.facts.rewardsBullets && card.facts.rewardsBullets.length > 0
-    ? card.facts.rewardsBullets
-    : rewardBullets(card.facts.rewards);
-}
+import { cardRewardBullets, leadWithNumber } from '../lib/rewards';
+import { aprSections } from '../lib/apr';
 
 interface CompareProps {
   watchlist: string[];
@@ -79,6 +73,14 @@ export default function Compare({ watchlist, setWatchlist, ownedCards, setOwnedC
     e.preventDefault();
     const cardId = e.dataTransfer.getData('cardId');
     if (cardId) setSlots((prev) => prev.map((s, idx) => (idx === i ? cardId : s)));
+  };
+
+  // Dropping onto the empty middle placeholder materializes the third column
+  // with the dragged card (mirrors addSlot + selectCard's 'new' branch).
+  const handleDropNew = (e: React.DragEvent) => {
+    e.preventDefault();
+    const cardId = e.dataTransfer.getData('cardId');
+    if (cardId) setSlots((prev) => (prev.length >= 3 ? prev : [...prev, cardId]));
   };
 
   const openSearch = (slot: number | 'watchlist') => {
@@ -211,7 +213,7 @@ export default function Compare({ watchlist, setWatchlist, ownedCards, setOwnedC
                 onRemove={() => removeSlot(2)}
               />
             ) : (
-              <AddCardSlot onClick={addSlot} />
+              <AddCardSlot onClick={addSlot} onDrop={handleDropNew} />
             )}
           </div>
 
@@ -388,9 +390,9 @@ function CompareColumn({
 
       {/* Detail spec list */}
       <dl className="mt-8 border-t border-[var(--cl-hairline)]">
-        <SpecRow label="Rewards" value={card.facts.rewards} bullets={rewardsList(card)} />
-        <SpecRow label="Sign-up bonus" value={card.facts.bonus} />
-        <SpecRow label="APR" value={card.facts.apr} />
+        <SpecRow label="Rewards" value={card.facts.rewards} bullets={cardRewardBullets(card.facts)} />
+        <SpecRow label="Sign-up bonus" value={leadWithNumber(card.facts.bonus)} />
+        <SpecRow label="APR" value={card.facts.apr} sections={aprSections(card.facts)} />
         <SpecRow label="Foreign fee" value={card.facts.foreignFee} />
         <SpecRow label="Best for" value={card.facts.bestFor} />
         <SpecRow label="Credit needed" value={card.facts.creditNeeded} />
@@ -415,12 +417,15 @@ function CompareColumn({
   );
 }
 
-// Card-shaped placeholder that adds a third comparison card when clicked.
-function AddCardSlot({ onClick }: { onClick: () => void }) {
+// Card-shaped placeholder that adds a third comparison card — click to search,
+// or drag a card from a rail straight onto it.
+function AddCardSlot({ onClick, onDrop }: { onClick: () => void; onDrop: (e: React.DragEvent) => void }) {
   return (
     <div className="w-full flex justify-center py-4">
       <button
         onClick={onClick}
+        onDragOver={(e) => e.preventDefault()}
+        onDrop={onDrop}
         aria-label="Add a third card to compare"
         className="w-[240px] h-[360px] md:w-[280px] md:h-[420px] rounded-[1.5rem] md:rounded-[2rem] border-2 border-dashed border-[var(--cl-hairline-strong)] flex flex-col items-center justify-center gap-3 text-[var(--cl-muted)] hover:text-[var(--cl-ink)] hover:border-[var(--cl-ink)]/50 transition-colors"
       >
@@ -450,13 +455,33 @@ function ParityIcon({ state }: { state: Tri }) {
   return <Minus className="w-[18px] h-[18px] shrink-0 text-[var(--cl-hairline-strong)]" strokeWidth={2.5} />;
 }
 
-function SpecRow({ label, value, bullets }: { label: string; value: string; bullets?: string[] }) {
-  const showBullets = bullets && bullets.length >= 2;
+function SpecRow({
+  label,
+  value,
+  bullets,
+  sections,
+}: {
+  label: string;
+  value: string;
+  bullets?: string[];
+  sections?: { label: string; value: string }[];
+}) {
+  const showBullets = bullets && bullets.length >= 1;
+  const showSections = sections && sections.length >= 1;
   return (
     <div className="flex justify-between gap-6 py-3.5 border-b border-[var(--cl-hairline)] last:border-b-0">
       <dt className="shrink-0 pt-0.5 text-[13px] text-[var(--cl-muted)]">{label}</dt>
       <dd className="max-w-[64%] text-right text-[14px] leading-relaxed text-[var(--cl-ink)] [overflow-wrap:anywhere]">
-        {showBullets ? (
+        {showSections ? (
+          <dl className="flex flex-col gap-1.5">
+            {sections!.map((s) => (
+              <div key={s.label} className="flex gap-2 justify-end leading-snug">
+                <dt className="font-semibold uppercase tracking-wide text-[var(--cl-muted)] shrink-0">{s.label}:</dt>
+                <dd>{s.value}</dd>
+              </div>
+            ))}
+          </dl>
+        ) : showBullets ? (
           <ul className="flex flex-col gap-1.5 text-left">
             {bullets!.map((b, i) => (
               <li key={i} className="flex gap-2">

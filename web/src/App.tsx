@@ -24,6 +24,7 @@ export default function App() {
   // separate from the general watchlist and shown apart on Compare.
   const [ownedCards, setOwnedCards] = useState<string[]>([]);
   const [homeFilters, setHomeFilters] = useState<string[]>([]);
+  const [matchAnswers, setMatchAnswers] = useState<Record<string, unknown> | undefined>();
   const [findOpen, setFindOpen] = useState(false);
   // True right after Find Me a Card completes: the home page shows only
   // "Your best matches" (no filter bubbles) until the user browses all.
@@ -39,6 +40,7 @@ export default function App() {
   const handleComplete = (r: MatchResult) => {
     setHomeFilters(r.filters);
     setOwnedCards(r.ownedCards);
+    setMatchAnswers(r.answers);
     setMatchMode(true);
     saveProfile({
       name: r.name,
@@ -55,10 +57,11 @@ export default function App() {
   const browseAll = () => {
     setMatchMode(false);
     setHomeFilters([]);
+    setMatchAnswers(undefined);
   };
 
   return (
-    <div className="min-h-screen bg-bg text-ink font-sans selection:bg-primary/30">
+    <div className="compare-light min-h-screen bg-[var(--cl-bg)] text-[var(--cl-ink)] font-sans selection:bg-primary/30">
       <Navigation
         currentPage={currentPage}
         setCurrentPage={setCurrentPage}
@@ -75,6 +78,7 @@ export default function App() {
             setFilters={setHomeFilters}
             ownedCards={ownedCards}
             matchMode={matchMode}
+            matchAnswers={matchAnswers}
             onBrowseAll={browseAll}
           />
         )}
@@ -88,7 +92,7 @@ export default function App() {
         )}
       </main>
 
-      <footer className="border-t border-border py-12 text-center text-muted text-sm">
+      <footer className="border-t border-[var(--cl-hairline)] py-12 text-center text-[var(--cl-muted)] text-sm">
         <p>© 2026 CardScope.</p>
       </footer>
 

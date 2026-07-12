@@ -11,6 +11,8 @@ export interface CardRow {
   issuer: string | null;
   annual_fee: number | null;
   apr_range: string | null;
+  apr_intro: string | null;
+  apr_regular: string | null;
   rewards_summary: string | null;
   rewards_bullets: string[] | null;
   signup_bonus: string | null;
@@ -85,7 +87,11 @@ export function mapRowToCard(row: CardRow): CreditCard {
       rewards: row.rewards_summary || 'See issuer site for rewards details',
       rewardsBullets: row.rewards_bullets && row.rewards_bullets.length > 0 ? row.rewards_bullets : undefined,
       bonus: row.signup_bonus || 'None',
-      apr: row.apr_range || 'See issuer site',
+      apr: row.apr_regular || row.apr_range || 'See issuer site',
+      aprIntro: row.apr_intro || undefined,
+      // Un-recrawled rows have no split field yet — fall back to apr_range so
+      // the Regular subsection always has something to show.
+      aprRegular: row.apr_regular || row.apr_range || undefined,
       bestFor: row.best_for || 'Everyday Spend',
       creditNeeded: row.recommended_credit_score || 'Not specified',
       foreignFee: row.foreign_transaction_fee || 'Not specified',

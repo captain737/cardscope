@@ -16,20 +16,23 @@ import { FILTERS, normalizeFilters as resolveConflicts } from './filters';
 */
 
 const SYNONYMS: Record<string, string[]> = {
-  travel: ['travel', 'trip', 'vacation', 'abroad', 'international'],
+  rewards: [
+    'rewards', 'points', 'miles',
+    'travel', 'trip', 'vacation', 'abroad', 'international',
+    'flight', 'flights', 'airline', 'airlines', 'fly', 'flying', 'airfare',
+    'hotel', 'hotels', 'resort', 'stays', 'marriott', 'hyatt', 'ihg',
+    'lounge', 'priority pass', 'airport lounge',
+  ],
   dining: ['dining', 'restaurant', 'food', 'takeout', 'eating out', 'eat out', 'dine', 'foodie'],
   business: ['business', 'llc', 'company', 'startup', 'freelance'],
   premium: ['premium', 'luxury', 'metal card', 'high end', 'exclusive'],
   'low-apr': ['low apr', 'low interest', '0%', 'zero percent', 'intro apr', 'no interest'],
   gas: ['gas', 'fuel', 'commute', 'commuting', 'driving'],
-  flights: ['flight', 'flights', 'airline', 'airlines', 'fly', 'flying', 'miles', 'airfare'],
   cashback: ['cashback', 'cash back', 'statement credit', 'money back'],
   groceries: ['grocery', 'groceries', 'supermarket', 'food shopping'],
   'no-fee': ['no annual fee', 'no fee', 'free card', 'without a fee', 'without an annual fee', 'without fees', 'fee free', '$0 fee', 'zero fee'],
   students: ['student', 'college', 'first card', 'build credit', 'building credit', 'beginner', 'starter'],
   balance: ['balance transfer', 'debt', 'pay off', 'consolidate', 'carry a balance'],
-  hotels: ['hotel', 'hotels', 'resort', 'stays', 'marriott', 'hyatt', 'ihg'],
-  lounge: ['lounge', 'priority pass', 'airport lounge'],
   personal: ['personal', 'everyday', 'daily'],
 };
 

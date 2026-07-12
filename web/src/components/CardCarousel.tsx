@@ -25,18 +25,20 @@ interface CardCarouselProps {
   setFilters: React.Dispatch<React.SetStateAction<string[]>>;
   ownedCards: string[];
   matchMode: boolean;
+  matchAnswers?: Record<string, unknown>;
   onBrowseAll: () => void;
 }
 
 export default function CardCarousel({
   watchlist, setWatchlist,
   filters: activeFilters, setFilters: setActiveFilters,
-  ownedCards, matchMode, onBrowseAll,
+  ownedCards, matchMode, matchAnswers, onBrowseAll,
 }: CardCarouselProps) {
   const { cards: allCards } = useCards();
   const [cards, setCards] = useState<CreditCard[]>(allCards);
   const [ranked, setRanked] = useState(false);
   const [complement, setComplement] = useState(false);
+  const [aboveLimit, setAboveLimit] = useState<CreditCard[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [nonce, setNonce] = useState(0); // bump to force a reshuffle
   const [providerFilter, setProviderFilter] = useState('all');
@@ -52,12 +54,13 @@ export default function CardCarousel({
   // are deterministic (best-first, stable); browse decks are shuffled.
   useEffect(() => {
     const pool = providerFilter === 'all' ? allCards : allCards.filter((c) => c.provider === providerFilter);
-    const result = buildDeck(pool, activeFilters, ownedCards, matchMode);
+    const result = buildDeck(pool, activeFilters, ownedCards, matchMode, matchAnswers);
     setCards(result.deck);
     setRanked(result.ranked);
     setComplement(result.complement);
+    setAboveLimit(result.aboveAnnualFeeLimit?.map((r) => r.card) || []);
     setCurrentIndex(0);
-  }, [allCards, activeFilters, ownedCards, matchMode, nonce, providerFilter]);
+  }, [allCards, activeFilters, ownedCards, matchMode, matchAnswers, nonce, providerFilter]);
 
   const nextCard = useCallback(() => {
     setCurrentIndex((prev) => (prev + 1) % cards.length);
@@ -238,6 +241,16 @@ export default function CardCarousel({
           ? `${cards.length} ${complement ? 'complementary' : 'matching'} card${cards.length === 1 ? '' : 's'} · ranked best-first`
           : `${cards.length} of ${allCards.length} cards · data crawled daily from issuer sites`}
       </p>
+      {matchMode && aboveLimit.length > 0 && (
+        <div className="relative z-10 mt-5 w-full max-w-3xl px-4">
+          <div className="border-t border-[var(--cl-hairline)] pt-4 text-center">
+            <p className="text-xs font-semibold uppercase tracking-wider text-[var(--cl-muted)]">Cards above your selected annual fee limit</p>
+            <p className="mt-2 text-sm text-[var(--cl-muted)]">
+              {aboveLimit.slice(0, 3).map((card) => card.name).join(' · ')}
+            </p>
+          </div>
+        </div>
+      )}
       </>
       ) : (
         <div className="relative z-20 mt-24 md:mt-32 px-6 text-center flex flex-col items-center gap-3">
