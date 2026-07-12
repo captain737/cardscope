@@ -39,7 +39,10 @@ export default function CardVisual({ card }: CardVisualProps) {
             // store logos, multi-card arrays — garble when rotated into the
             // portrait slot, so drop those to the gradient face instead.
             const { naturalWidth: w, naturalHeight: h } = e.currentTarget;
-            if (w && h && (w <= h || w / h < 1.3 || w / h > 1.8)) setArtFailed(true);
+            // Reject portrait/square, non-card ratios, AND anything too low-res
+            // to render sharp at the ~420px slot — those fall back to the clean
+            // gradient face rather than showing a blurry/undersized image.
+            if (w && h && (w <= h || w / h < 1.3 || w / h > 1.8 || w < 200)) setArtFailed(true);
           }}
           className="rotate-90 w-[360px] h-[240px] md:w-[420px] md:h-[280px] max-w-none object-contain drop-shadow-[0_16px_40px_rgba(0,0,0,0.55)]"
         />
