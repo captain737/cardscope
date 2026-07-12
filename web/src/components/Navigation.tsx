@@ -29,10 +29,10 @@ export default function Navigation({ currentPage, setCurrentPage, findActive, on
       <button
         onClick={() => setCurrentPage('home')}
         className="pointer-events-auto flex items-center gap-2 group"
-        aria-label="Card Fit home"
+        aria-label="CardFit home"
       >
         <Layers className="w-5 h-5 text-primary transition-transform duration-300 group-hover:scale-110" />
-        <span className="font-display font-bold text-lg tracking-tight text-primary">Card Fit</span>
+        <span className="font-display font-bold text-lg tracking-tight text-primary">CardFit</span>
       </button>
 
       <nav className="pointer-events-auto flex items-center gap-1 p-1 rounded-full bg-surface/90 backdrop-blur-sm border border-border">
