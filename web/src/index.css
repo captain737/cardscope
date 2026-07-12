@@ -36,9 +36,9 @@ html, body {
 }
 body {
   @apply text-ink antialiased overflow-x-hidden selection:bg-primary/30;
-  /* Render the whole app at 75% (like browser zoom) — scales uniformly and
+  /* Render the whole app at 80% (like browser zoom) — scales uniformly and
      keeps fixed positioning correct, unlike transform: scale. */
-  zoom: 0.75;
+  zoom: 0.8;
 }
 
 /* Nav bar and the search/command-palette-style modals: the only two
