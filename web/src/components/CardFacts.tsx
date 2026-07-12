@@ -110,9 +110,9 @@ export default function CardFacts({ card, watchlist, setWatchlist }: CardFactsPr
                     ))}
                   </ul>
                 ) : cell.label === 'APR' && apr.length > 0 ? (
-                  <dl className="flex flex-col gap-1.5 text-left max-w-[46ch]">
+                  <dl className="flex flex-col gap-1.5 items-center max-w-[46ch]">
                     {apr.map((s) => (
-                      <div key={s.label} className="flex gap-2 text-sm md:text-base leading-snug">
+                      <div key={s.label} className="flex gap-2 justify-center text-center text-sm md:text-base leading-snug">
                         <dt className="font-semibold uppercase tracking-wide text-[var(--cl-muted)] shrink-0">{s.label}:</dt>
                         <dd className="font-medium text-[var(--cl-ink)]">{s.value}</dd>
                       </div>

@@ -475,7 +475,7 @@ function SpecRow({
         {showSections ? (
           <dl className="flex flex-col gap-1.5">
             {sections!.map((s) => (
-              <div key={s.label} className="flex gap-2 justify-end leading-snug">
+              <div key={s.label} className="flex gap-2 justify-center leading-snug">
                 <dt className="font-semibold uppercase tracking-wide text-[var(--cl-muted)] shrink-0">{s.label}:</dt>
                 <dd>{s.value}</dd>
               </div>
