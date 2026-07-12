@@ -123,3 +123,74 @@ create policy "public read active cards"
 -- card_history/card_rejections or for writes on cards -- only the
 -- service_role key (used solely by the crawler, never the frontend)
 -- can touch those, since service_role bypasses RLS entirely.
+
+-- ---------------------------------------------------------------------
+-- user_profiles: account-free "remember me" for the Find Me a Card flow.
+--
+-- Keyed by email (the only identity we have — no auth). Stores the user's
+-- name, owned cards, derived filters, and raw questionnaire answers so a
+-- returning visitor who re-enters their email gets everything prefilled,
+-- even on a new device.
+--
+-- Privacy: RLS is on and NO direct anon access is granted. All reads/writes
+-- go through the two SECURITY DEFINER functions below, so the public anon
+-- key can only fetch ONE profile by exact email — it can never enumerate or
+-- dump every user's email/preferences.
+-- ---------------------------------------------------------------------
+create table if not exists user_profiles (
+  email       text primary key,
+  name        text,
+  owned_cards jsonb not null default '[]'::jsonb,
+  filters     jsonb not null default '[]'::jsonb,
+  answers     jsonb not null default '{}'::jsonb,
+  created_at  timestamptz not null default now(),
+  updated_at  timestamptz not null default now()
+);
+
+alter table user_profiles enable row level security;
+-- (intentionally no anon/authenticated policies — table is reachable only
+--  through the SECURITY DEFINER functions below.)
+
+-- Fetch a single profile by exact email (case/whitespace-insensitive).
+create or replace function get_user_profile(p_email text)
+returns user_profiles
+language sql
+security definer
+set search_path = public
+as $$
+  select * from user_profiles where email = lower(trim(p_email));
+$$;
+
+-- Insert or update the caller's own profile, keyed by email.
+create or replace function upsert_user_profile(
+  p_email       text,
+  p_name        text,
+  p_owned_cards jsonb,
+  p_filters     jsonb,
+  p_answers     jsonb
+) returns void
+language sql
+security definer
+set search_path = public
+as $$
+  insert into user_profiles (email, name, owned_cards, filters, answers, updated_at)
+  values (
+    lower(trim(p_email)), p_name,
+    coalesce(p_owned_cards, '[]'::jsonb),
+    coalesce(p_filters,     '[]'::jsonb),
+    coalesce(p_answers,     '{}'::jsonb),
+    now()
+  )
+  on conflict (email) do update set
+    name        = excluded.name,
+    owned_cards = excluded.owned_cards,
+    filters     = excluded.filters,
+    answers     = excluded.answers,
+    updated_at  = now();
+$$;
+
+-- Only these two functions are callable by the browser; nothing else.
+revoke all on function get_user_profile(text) from public;
+revoke all on function upsert_user_profile(text, text, jsonb, jsonb, jsonb) from public;
+grant execute on function get_user_profile(text) to anon, authenticated;
+grant execute on function upsert_user_profile(text, text, jsonb, jsonb, jsonb) to anon, authenticated;

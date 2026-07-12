@@ -3,6 +3,7 @@ import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import { ChevronLeft, ChevronRight, X, Search, Plus } from 'lucide-react';
 import { normalizeFilters } from '../lib/filters';
 import { loadProfile } from '../lib/profile';
+import { loadRemoteProfile } from '../lib/remoteProfile';
 import { useCards } from '../hooks/useCards';
 import type { MatchResult } from '../App';
 
@@ -71,6 +72,9 @@ export default function FindMyCard({ open, onClose, onComplete }: FindMyCardProp
   const reducedMotion = useReducedMotion();
   const [answers, setAnswers] = useState<Answers>(BLANK);
   const [index, setIndex] = useState(0);
+  // True once we've matched the typed email to a saved Supabase profile and
+  // prefilled the rest of the questionnaire from it.
+  const [welcomeBack, setWelcomeBack] = useState(false);
 
   // Prefill a returning visitor's details each time the sheet opens.
   useEffect(() => {
@@ -96,6 +100,29 @@ export default function FindMyCard({ open, onClose, onComplete }: FindMyCardProp
   }, [open, onClose]);
 
   const set = (patch: Partial<Answers>) => setAnswers(prev => ({ ...prev, ...patch }));
+
+  // Returning-visitor recall: when the email loses focus, look it up in
+  // Supabase and prefill every saved answer so they can skim or tweak.
+  const lookupEmail = async (email: string) => {
+    const remote = await loadRemoteProfile(email);
+    if (!remote) { setWelcomeBack(false); return; }
+    const a = remote.answers || {};
+    const [first = '', ...rest] = (remote.name || '').split(' ');
+    setAnswers(prev => ({
+      ...prev,
+      firstName: first || prev.firstName,
+      lastName: rest.join(' ') || prev.lastName,
+      email,
+      ownedCards: remote.ownedCards?.length ? remote.ownedCards : prev.ownedCards,
+      hasCard: typeof a.hasCard === 'boolean' ? a.hasCard : (remote.ownedCards?.length ? true : prev.hasCard),
+      credit: typeof a.credit === 'string' ? a.credit : prev.credit,
+      type: typeof a.type === 'string' ? a.type : prev.type,
+      rewards: typeof a.rewards === 'string' ? a.rewards : prev.rewards,
+      maxFee: typeof a.maxFee === 'number' ? a.maxFee : prev.maxFee,
+      spend: a.spend && typeof a.spend === 'object' ? a.spend as Record<string, number> : prev.spend,
+    }));
+    setWelcomeBack(true);
+  };
 
   // The step order branches on whether they already hold a card.
   const steps = useMemo(() => {
@@ -165,7 +192,7 @@ export default function FindMyCard({ open, onClose, onComplete }: FindMyCardProp
               transition={{ duration: reducedMotion ? 0.16 : 0.28, ease: [0.16, 1, 0.3, 1] }}
               className="w-full flex flex-col items-center text-center"
             >
-              {step === 'email' && <EmailStep answers={answers} set={set} />}
+              {step === 'email' && <EmailStep answers={answers} set={set} onEmailBlur={lookupEmail} welcomeBack={welcomeBack} />}
               {step === 'hasCard' && <HasCardStep answers={answers} set={set} />}
               {step === 'ownedCards' && <OwnedCardsStep answers={answers} set={set} />}
               {step === 'credit' && <CreditStep answers={answers} set={set} />}
@@ -241,11 +268,11 @@ function Heading({ title, hint }: { title: string; hint?: string }) {
 
 interface StepProps { answers: Answers; set: (p: Partial<Answers>) => void; }
 
-function EmailStep({ answers, set }: StepProps) {
+function EmailStep({ answers, set, onEmailBlur, welcomeBack }: StepProps & { onEmailBlur: (email: string) => void; welcomeBack: boolean }) {
   const inputClass = 'flex-1 min-w-0 h-12 px-4 rounded-2xl bg-[var(--cl-bg)] border border-[var(--cl-hairline-strong)] text-[var(--cl-ink)] placeholder-[var(--cl-muted)] text-[15px] focus:outline-none focus:border-[var(--cl-gold)] transition-colors';
   return (
     <div className="w-full flex flex-col items-center">
-      <Heading title="Save your progress" hint="Drop your name and email so we remember your cards and matches next time. Totally optional." />
+      <Heading title="Save your progress" hint="Drop your name and email so we remember your cards and matches next time. Enter an email you've used before and we'll bring your setup back." />
       <div className="w-full max-w-md flex flex-col gap-3">
         <div className="flex gap-3">
           <input
@@ -265,10 +292,15 @@ function EmailStep({ answers, set }: StepProps) {
           type="email"
           value={answers.email}
           onChange={e => set({ email: e.target.value })}
+          onBlur={e => e.target.value.includes('@') && onEmailBlur(e.target.value)}
           placeholder="Email address"
           className="w-full h-12 px-4 rounded-2xl bg-[var(--cl-bg)] border border-[var(--cl-hairline-strong)] text-[var(--cl-ink)] placeholder-[var(--cl-muted)] text-[15px] focus:outline-none focus:border-[var(--cl-gold)] transition-colors"
         />
-        <p className="text-xs text-[var(--cl-muted)] mt-1">No account, no password. We just use this to remember you.</p>
+        {welcomeBack ? (
+          <p className="text-xs font-medium text-[var(--cl-gold)] mt-1">Welcome back — we found your saved preferences and filled them in.</p>
+        ) : (
+          <p className="text-xs text-[var(--cl-muted)] mt-1">No account, no password. We just use this to remember you.</p>
+        )}
       </div>
     </div>
   );

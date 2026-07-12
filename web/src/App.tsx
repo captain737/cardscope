@@ -8,6 +8,7 @@ import CardCarousel from './components/CardCarousel';
 import FindMyCard from './components/FindMyCard';
 import Compare from './components/Compare';
 import { loadProfile, saveProfile } from './lib/profile';
+import { saveRemoteProfile } from './lib/remoteProfile';
 
 export interface MatchResult {
   filters: string[];
@@ -42,13 +43,17 @@ export default function App() {
     setOwnedCards(r.ownedCards);
     setMatchAnswers(r.answers);
     setMatchMode(true);
-    saveProfile({
+    const profile = {
       name: r.name,
       email: r.email,
       ownedCards: r.ownedCards,
       filters: r.filters,
       answers: r.answers,
-    });
+    };
+    saveProfile(profile);
+    // Also persist to Supabase (keyed by email) for cross-device recall.
+    // Fire-and-forget: localStorage already has it if this fails.
+    void saveRemoteProfile(profile);
     setFindOpen(false);
     setCurrentPage('home');
   };
