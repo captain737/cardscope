@@ -28,8 +28,14 @@
   --color-danger: oklch(0.62 0.18 25);
 }
 
+/* The whole product now runs the light editorial theme, so the page canvas
+   (what shows through header/footer gaps and macOS overscroll/rubber-band)
+   is the same near-white as .compare-light's --cl-bg, not the dark shell. */
+html, body {
+  background: oklch(0.99 0.003 80);
+}
 body {
-  @apply bg-bg text-ink antialiased overflow-x-hidden selection:bg-primary/30;
+  @apply text-ink antialiased overflow-x-hidden selection:bg-primary/30;
 }
 
 /* Nav bar and the search/command-palette-style modals: the only two
