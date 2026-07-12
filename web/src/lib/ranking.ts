@@ -427,12 +427,17 @@ function filtersToContext(filters: string[]): PublicRankingContext {
   const account = filters.find((f) => FILTER_BY_ID[f]?.group === 'account');
   const reward = filters.find((f) => FILTER_BY_ID[f]?.group === 'reward');
 
+  // Segment stays undefined unless the user expresses a reward/account/balance
+  // intent. Undefined means "all reward types" — quality-only filters like
+  // Premium / No Annual Fee then apply across cash-back AND travel/points cards
+  // (each scored by its own reward formula) instead of being forced to
+  // cash-back, which used to hide most premium travel cards.
   let segment: PublicSegment | undefined;
   if (account === 'business') segment = 'business';
   else if (account === 'students') segment = 'student';
   else if (filters.includes('balance')) segment = 'balance_transfer';
   else if (reward === 'rewards') segment = 'travel_points';
-  else segment = 'cash_back';
+  else if (reward === 'cashback') segment = 'cash_back';
 
   return {
     segment,
@@ -443,8 +448,23 @@ function filtersToContext(filters: string[]): PublicRankingContext {
   };
 }
 
+/** The reward segment a card belongs to, used to score it when the user
+ *  hasn't picked a reward type (quality-only filters like Premium). */
+function cardOwnSegment(card: RankingCard): PublicSegment {
+  switch (card.rewardSystem) {
+    case 'points':
+    case 'miles':
+    case 'hotel':
+    case 'airline': return 'travel_points';
+    case 'balance_transfer': return 'balance_transfer';
+    default: return 'cash_back';
+  }
+}
+
 function publicEligible(card: RankingCard, context: PublicRankingContext): { ok: boolean; reasons: string[] } {
-  const segment = context.segment || filtersToContext(context.filters || []).segment || 'cash_back';
+  // No fallback to cash_back: an undefined segment means "any reward type",
+  // so the reward-system checks below simply don't apply.
+  const segment = context.segment;
   const reasons: string[] = [];
   const audience = context.audience;
   if (audience === 'business' && card.audience !== 'business') reasons.push('not a business card');
@@ -458,7 +478,9 @@ function publicEligible(card: RankingCard, context: PublicRankingContext): { ok:
   if (segment === 'business' && card.audience !== 'business') reasons.push('not a business card');
 
   if (context.annualFeeRule === 'no_annual_fee' && (!card.annualFeeKnown || card.annualFee !== 0)) reasons.push('annual fee above $0');
-  if (context.annualFeeRule === 'premium' && card.annualFeeTier !== 'premium') reasons.push('not premium tier');
+  // Premium = any card that charges an annual fee (not just the high-fee
+  // tier). A $0 card — or one whose fee we can't confirm — is not premium.
+  if (context.annualFeeRule === 'premium' && !(card.annualFeeKnown && card.annualFee > 0)) reasons.push('no annual fee (not premium)');
   if (context.creditBand && computeApprovalLikelihood({ hasCreditCards: true, existingCards: [], isStudent: false, isBusinessOwner: false, maxAnnualFee: 999, monthlySpend: {}, goals: {}, creditBand: context.creditBand }, card) < 25) reasons.push('below credit-band eligibility');
 
   return { ok: reasons.length === 0, reasons };
@@ -478,14 +500,17 @@ function publicExplanation(card: RankingCard, segment: PublicSegment, softCatego
 
 export function getTop15Cards(cards: CreditCard[], context: PublicRankingContext): RankedCardResult[] {
   const resolved = { ...filtersToContext(context.filters || []), ...context };
-  const segment = resolved.segment || 'cash_back';
+  const explicitSegment = resolved.segment;
   const softCategories = resolved.softCategories || [];
   const ranked = cards
     .map(deriveRankingCard)
     .map((card) => {
+      // With no chosen reward type, score each card by its own segment so
+      // cash-back and travel cards compete fairly under a quality-only filter.
+      const seg = explicitSegment ?? cardOwnSegment(card);
       const eligibility = publicEligible(card, resolved);
-      const hardScore = eligibility.ok ? computeSegmentScore(card, segment) : 0;
-      return { card, eligibility, hardScore };
+      const hardScore = eligibility.ok ? computeSegmentScore(card, seg) : 0;
+      return { card, eligibility, hardScore, seg };
     })
     .filter((item) => item.eligibility.ok && item.hardScore >= PUBLIC_MIN_HARD_SCORE)
     .sort((a, b) => b.hardScore - a.hardScore)
@@ -499,7 +524,7 @@ export function getTop15Cards(cards: CreditCard[], context: PublicRankingContext
         finalScore,
         hardScore: item.hardScore,
         softScore,
-        explanation: publicExplanation(item.card, segment, softCategories),
+        explanation: publicExplanation(item.card, item.seg, softCategories),
         debug: {
           cardId: item.card.id,
           finalScore,
