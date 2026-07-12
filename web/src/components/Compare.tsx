@@ -176,7 +176,7 @@ export default function Compare({ watchlist, setWatchlist, ownedCards, setOwnedC
         </div>
 
         {/* Shuffle control */}
-        <div className="flex justify-end mb-8">
+        <div className="flex justify-end mb-4">
           <button
             onClick={shuffleCards}
             className="inline-flex items-center gap-2 rounded-full border border-[var(--cl-hairline-strong)] px-4 h-10 text-sm font-medium text-[var(--cl-ink)] hover:bg-[var(--cl-panel)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cl-ink)]/30"
@@ -192,7 +192,7 @@ export default function Compare({ watchlist, setWatchlist, ownedCards, setOwnedC
           initial={reduce ? false : { opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: reduce ? 0 : 0.2, ease: [0.16, 1, 0.3, 1] }}
-          className="flex flex-col md:flex-row items-stretch gap-4 md:gap-6"
+          className="flex flex-col md:flex-row items-stretch gap-2 md:gap-3"
         >
           <div className="flex-1 min-w-0">
             <CompareColumn
