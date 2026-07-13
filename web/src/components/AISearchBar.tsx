@@ -96,8 +96,8 @@ export default function AISearchBar({ onQueryChange, onFiltersParsed }: AISearch
   };
 
   return (
-    <div className="relative flex-1 max-w-3xl">
-      <div className="flex items-center gap-2 rounded-[28px] bg-surface-raised border border-border shadow-[0_8px_32px_-8px_rgb(0_0_0_/_0.55)] pl-6 pr-2.5 py-2.5 focus-within:border-border-strong transition-colors">
+    <div className="relative w-full max-w-2xl mx-auto">
+      <div className="flex items-center gap-2 rounded-[28px] bg-[var(--cl-panel)] border border-[var(--cl-hairline-strong)] shadow-[0_8px_24px_-12px_rgb(0_0_0_/_0.25)] pl-6 pr-2.5 py-2.5 focus-within:border-[var(--cl-ink)] transition-colors">
         <input
           type="text"
           value={value}
@@ -105,13 +105,13 @@ export default function AISearchBar({ onQueryChange, onFiltersParsed }: AISearch
           onKeyDown={e => { if (e.key === 'Enter') submit(); }}
           placeholder={value ? '' : placeholder + (reducedMotion.current ? '' : '|')}
           aria-label="Describe the card you're looking for"
-          className="flex-1 min-w-0 bg-transparent border-none outline-none text-ink placeholder-muted text-[15px] py-1.5"
+          className="flex-1 min-w-0 bg-transparent border-none outline-none text-[var(--cl-ink)] placeholder-[var(--cl-muted)] text-[15px] py-1.5"
         />
         {value && (
           <button
             onClick={clear}
             aria-label="Clear search"
-            className="text-muted hover:text-ink transition-colors p-1.5 shrink-0"
+            className="text-[var(--cl-muted)] hover:text-[var(--cl-ink)] transition-colors p-1.5 shrink-0"
           >
             <X className="w-4 h-4" />
           </button>
@@ -120,14 +120,14 @@ export default function AISearchBar({ onQueryChange, onFiltersParsed }: AISearch
           onClick={submit}
           disabled={!value.trim()}
           aria-label="Match filters to my description"
-          className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 ${
+          className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cl-ink)]/30 ${
             value.trim()
-              ? 'bg-primary text-bg hover:bg-primary-deep'
-              : 'bg-border/60 text-muted cursor-default'
+              ? 'bg-[var(--cl-pill)] text-[var(--cl-pill-ink)] hover:opacity-90'
+              : 'bg-[var(--cl-hairline)] text-[var(--cl-muted)] cursor-default'
           }`}
         >
           {parsing ? (
-            <span className="w-4 h-4 rounded-full border-2 border-bg/30 border-t-bg animate-spin" aria-hidden="true" />
+            <span className="w-4 h-4 rounded-full border-2 border-[var(--cl-pill-ink)]/30 border-t-[var(--cl-pill-ink)] animate-spin" aria-hidden="true" />
           ) : (
             <ArrowUp className="w-4 h-4" />
           )}

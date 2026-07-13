@@ -98,8 +98,15 @@ export function cardInsights(card: CreditCard): CardInsights {
   // --- Approval ---
   const approval: ApprovalDifficulty = { label: APPROVAL[rc.creditBand], band: rc.creditBand };
 
-  // --- Reward examples (top 2 categories) ---
-  const exampleCats: Cat[] = [top.cat, top.cat === 'general' ? 'groceries' : 'general'];
+  // --- Reward examples: the best earning category (if any bonus) + everyday,
+  // never a 0-rate category. ---
+  const bonusCats = (['groceries', 'dining', 'gas', 'travel'] as Cat[])
+    .map((c) => ({ c, r: rateFor(rc, c) }))
+    .filter((x) => x.r > rc.baseRate)
+    .sort((a, b) => b.r - a.r);
+  const exampleCats: Cat[] = [];
+  if (bonusCats[0]) exampleCats.push(bonusCats[0].c);
+  if (rc.baseRate > 0) exampleCats.push('general');
   const rewardExamples = [...new Set(exampleCats)].slice(0, 2).map((c) => {
     const r = rateFor(rc, c);
     const monthly = TYPICAL_SPEND[c];

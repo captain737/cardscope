@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight, ChevronDown, Shuffle, Sparkles } from 'lucid
 import CardVisual from './CardVisual';
 import CardFacts from './CardFacts';
 import BubbleFilters from './BubbleFilters';
+import AISearchBar from './AISearchBar';
 import { buildDeck } from '../lib/ranking';
 import { fetchAdvisorNote, advisorEnabled } from '../lib/advisor';
 import { pushRecentlyViewed } from '../lib/recentlyViewed';
@@ -165,6 +166,11 @@ export default function CardCarousel({
         </div>
       ) : (
         <>
+          {/* Smart Search (F1): natural-language → filter toggles */}
+          <div className="relative z-20 w-full px-4 mt-2 mb-1">
+            <AISearchBar onQueryChange={() => {}} onFiltersParsed={setActiveFilters} />
+          </div>
+
           <div className="relative z-20 w-full mt-4 md:mt-6">
             <BubbleFilters activeFilters={activeFilters} onFiltersChange={setActiveFilters} />
           </div>
