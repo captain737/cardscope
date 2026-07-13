@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
-import { ChevronLeft, ChevronRight, ChevronDown, Shuffle } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ChevronDown, Shuffle, Sparkles } from 'lucide-react';
 import CardVisual from './CardVisual';
 import CardFacts from './CardFacts';
 import BubbleFilters from './BubbleFilters';
@@ -18,6 +18,15 @@ const PROVIDER_LABELS: Record<string, string> = {
 };
 const providerLabel = (p: string) =>
   PROVIDER_LABELS[p] ?? p.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+
+// Rank a reason so the two most substantive ones lead: a concrete reward
+// rate or complementarity beats the generic fee-fit / approval lines.
+function reasonRank(line: string): number {
+  if (/^Strong /.test(line) || /^Complements/.test(line)) return 3;
+  if (/^Adds meaningful|^Keeps costs|^Supports credit/.test(line)) return 2;
+  if (/^Fits your \$/.test(line)) return 1;
+  return 0; // approval language
+}
 
 interface CardCarouselProps {
   watchlist: string[];
@@ -100,6 +109,8 @@ export default function CardCarousel({
   const rankLabel = complement ? 'best choice for you' : 'best match';
   // Show the tailored reasoning only in match mode (Find Me a Card results).
   const activeWhy = matchMode && activeCard ? explanations[activeCard.id] : undefined;
+  // The two strongest reasons, shown as centered bullets under the rank badge.
+  const topReasons = (activeWhy ?? []).slice().sort((a, b) => reasonRank(b) - reasonRank(a)).slice(0, 2);
 
   // AI advisor note (Phase 2) for the active best-match card. Only runs when
   // the endpoint is configured; degrades to nothing otherwise.
@@ -262,21 +273,32 @@ export default function CardCarousel({
                 <span className="text-[var(--cl-gold)] font-semibold">#{currentIndex + 1}</span> {rankLabel}
               </p>
             )}
+            {activeWhy && activeWhy.length > 0 && (
+              <ul className="mt-3 flex flex-col items-center gap-1.5">
+                {topReasons.map((line, i) => (
+                  <li key={i} className="flex items-baseline justify-center gap-2 text-sm text-[var(--cl-ink)]">
+                    <span aria-hidden className="h-1 w-1 rounded-full bg-[var(--cl-gold)] shrink-0" />
+                    <span>{line}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {advisorLoading ? (
+              <p className="mt-2.5 flex items-center justify-center gap-2 text-xs text-[var(--cl-muted)]">
+                <Sparkles className="w-3.5 h-3.5 animate-pulse text-[var(--cl-gold)]" /> Analyzing your wallet…
+              </p>
+            ) : advisorNote ? (
+              <p className="mt-2.5 max-w-md mx-auto text-sm text-[var(--cl-ink)] leading-relaxed">
+                <Sparkles className="inline w-3.5 h-3.5 text-[var(--cl-gold)] mr-1 align-[-0.15em]" />{advisorNote}
+              </p>
+            ) : null}
           </motion.div>
         </AnimatePresence>
       </div>
 
-      {/* Facts Section — in match mode the "Best For" cell becomes
-          "Why This Fits You" (tailored bullets + optional AI advisor note). */}
+      {/* Facts Section */}
       <div className="relative z-20 w-full mt-4 md:mt-5">
-        <CardFacts
-          card={activeCard}
-          watchlist={watchlist}
-          setWatchlist={setWatchlist}
-          whyBullets={activeWhy}
-          advisorNote={advisorNote}
-          advisorLoading={advisorLoading}
-        />
+        <CardFacts card={activeCard} watchlist={watchlist} setWatchlist={setWatchlist} />
       </div>
 
       {/* Data provenance footnote */}

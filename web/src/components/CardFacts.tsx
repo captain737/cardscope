@@ -1,6 +1,6 @@
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import { CreditCard as CreditCardType } from '../types';
-import { ArrowUpRight, Plus, X, Sparkles } from 'lucide-react';
+import { ArrowUpRight, Plus, X } from 'lucide-react';
 import { Dispatch, SetStateAction } from 'react';
 import { cardRewardBullets, leadWithNumber, topPerkDisplay } from '../lib/rewards';
 import { aprSections } from '../lib/apr';
@@ -9,11 +9,6 @@ interface CardFactsProps {
   card: CreditCardType;
   watchlist: string[];
   setWatchlist: Dispatch<SetStateAction<string[]>>;
-  // In match mode the "Best For" cell becomes "Why This Fits You": the
-  // recommender's tailored bullets plus an optional AI advisor note.
-  whyBullets?: string[];
-  advisorNote?: string | null;
-  advisorLoading?: boolean;
 }
 
 /**
@@ -21,14 +16,13 @@ interface CardFactsProps {
  * outer border), every cell text-centered, the card identity + actions in
  * the center square with the eight facts around it.
  */
-export default function CardFacts({ card, watchlist, setWatchlist, whyBullets, advisorNote, advisorLoading }: CardFactsProps) {
+export default function CardFacts({ card, watchlist, setWatchlist }: CardFactsProps) {
   const onWatchlist = watchlist.includes(card.id);
   const reducedMotion = useReducedMotion();
   // Rewards render as bullets whenever there's real data (hard rule), each
   // leading with its rate; [] means placeholder text, shown as prose.
   const rewardsBullets = cardRewardBullets(card.facts);
   const apr = aprSections(card.facts);
-  const showWhy = Boolean(whyBullets && whyBullets.length > 0);
 
   const cells: Array<{ label: string; value: string } | 'center'> = [
     { label: 'Annual Fee', value: card.facts.annualFee },
@@ -36,7 +30,7 @@ export default function CardFacts({ card, watchlist, setWatchlist, whyBullets, a
     { label: 'Sign-up Bonus', value: leadWithNumber(card.facts.bonus) },
     { label: 'APR', value: card.facts.apr },
     'center',
-    showWhy ? { label: 'Why This Fits You', value: '' } : { label: 'Best For', value: card.facts.bestFor },
+    { label: 'Best For', value: card.facts.bestFor },
     { label: 'Credit Needed', value: card.facts.creditNeeded },
     { label: 'Foreign Fee', value: card.facts.foreignFee },
     { label: 'Top Perk', value: topPerkDisplay(card.facts) },
@@ -115,32 +109,6 @@ export default function CardFacts({ card, watchlist, setWatchlist, whyBullets, a
                       </li>
                     ))}
                   </ul>
-                ) : cell.label === 'Why This Fits You' ? (
-                  <div className="flex flex-col gap-2 text-left max-w-[46ch]">
-                    <ul className="flex flex-col gap-1.5">
-                      {whyBullets!.map((b, i) => (
-                        <li key={i} className="flex gap-2 text-sm md:text-base font-medium text-[var(--cl-ink)] leading-relaxed">
-                          <span aria-hidden className="mt-[0.5em] h-1 w-1 rounded-full bg-[var(--cl-gold)] shrink-0" />
-                          <span>{b}</span>
-                        </li>
-                      ))}
-                    </ul>
-                    {(advisorLoading || advisorNote) && (
-                      <div className="mt-1 pt-2.5 border-t border-[var(--cl-hairline)]">
-                        {advisorLoading ? (
-                          <div className="flex items-center gap-2 text-xs text-[var(--cl-muted)]">
-                            <Sparkles className="w-3.5 h-3.5 animate-pulse text-[var(--cl-gold)]" />
-                            <span>Analyzing your wallet…</span>
-                          </div>
-                        ) : (
-                          <div className="flex gap-2">
-                            <Sparkles className="w-4 h-4 mt-[0.15em] text-[var(--cl-gold)] shrink-0" />
-                            <p className="text-sm text-[var(--cl-ink)] leading-relaxed">{advisorNote}</p>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
                 ) : cell.label === 'APR' && apr.length > 0 ? (
                   <dl className="flex flex-col gap-1.5 items-center max-w-[46ch]">
                     {apr.map((s) => (
