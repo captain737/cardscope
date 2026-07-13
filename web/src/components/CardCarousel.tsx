@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
-import { ChevronLeft, ChevronRight, ChevronDown, Shuffle, Sparkles } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ChevronDown, Shuffle } from 'lucide-react';
 import CardVisual from './CardVisual';
 import CardFacts from './CardFacts';
 import BubbleFilters from './BubbleFilters';
@@ -266,50 +266,17 @@ export default function CardCarousel({
         </AnimatePresence>
       </div>
 
-      {/* Why this fits you — tailored reasoning from the recommender */}
-      {activeWhy && activeWhy.length > 0 && (
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={activeCard.id + '-why'}
-            initial={{ opacity: 0, y: reducedMotion ? 0 : 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, transition: { duration: 0.12 } }}
-            transition={{ duration: reducedMotion ? 0 : 0.3, ease: [0.16, 1, 0.3, 1] }}
-            className="relative z-20 w-full max-w-xl mx-auto mt-6 px-4"
-          >
-            <div className="rounded-2xl border border-[var(--cl-hairline)] bg-[var(--cl-panel)] p-4 md:p-5 text-left">
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--cl-gold)] mb-2.5">Why this fits you</p>
-              <ul className="flex flex-col gap-2">
-                {activeWhy.map((line, i) => (
-                  <li key={i} className="flex gap-2.5 text-sm text-[var(--cl-ink)] leading-relaxed">
-                    <span aria-hidden className="mt-[0.55em] h-1 w-1 rounded-full bg-[var(--cl-gold)] shrink-0" />
-                    <span>{line}</span>
-                  </li>
-                ))}
-              </ul>
-              {(advisorLoading || advisorNote) && (
-                <div className="mt-3.5 pt-3.5 border-t border-[var(--cl-hairline)]">
-                  {advisorLoading ? (
-                    <div className="flex items-center gap-2 text-xs text-[var(--cl-muted)]">
-                      <Sparkles className="w-3.5 h-3.5 animate-pulse text-[var(--cl-gold)]" />
-                      <span>Analyzing your wallet…</span>
-                    </div>
-                  ) : (
-                    <div className="flex gap-2.5">
-                      <Sparkles className="w-4 h-4 mt-[0.15em] text-[var(--cl-gold)] shrink-0" />
-                      <p className="text-sm text-[var(--cl-ink)] leading-relaxed">{advisorNote}</p>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          </motion.div>
-        </AnimatePresence>
-      )}
-
-      {/* Facts Section */}
+      {/* Facts Section — in match mode the "Best For" cell becomes
+          "Why This Fits You" (tailored bullets + optional AI advisor note). */}
       <div className="relative z-20 w-full mt-4 md:mt-5">
-        <CardFacts card={activeCard} watchlist={watchlist} setWatchlist={setWatchlist} />
+        <CardFacts
+          card={activeCard}
+          watchlist={watchlist}
+          setWatchlist={setWatchlist}
+          whyBullets={activeWhy}
+          advisorNote={advisorNote}
+          advisorLoading={advisorLoading}
+        />
       </div>
 
       {/* Data provenance footnote */}
