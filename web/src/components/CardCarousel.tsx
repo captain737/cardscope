@@ -1,10 +1,11 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
-import { ChevronLeft, ChevronRight, ChevronDown, Shuffle } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ChevronDown, Shuffle, Sparkles } from 'lucide-react';
 import CardVisual from './CardVisual';
 import CardFacts from './CardFacts';
 import BubbleFilters from './BubbleFilters';
 import { buildDeck } from '../lib/ranking';
+import { fetchAdvisorNote, advisorEnabled } from '../lib/advisor';
 import { useCards } from '../hooks/useCards';
 import { CreditCard } from '../types';
 
@@ -99,6 +100,36 @@ export default function CardCarousel({
   const rankLabel = complement ? 'best choice for you' : 'best match';
   // Show the tailored reasoning only in match mode (Find Me a Card results).
   const activeWhy = matchMode && activeCard ? explanations[activeCard.id] : undefined;
+
+  // AI advisor note (Phase 2) for the active best-match card. Only runs when
+  // the endpoint is configured; degrades to nothing otherwise.
+  const [advisorNote, setAdvisorNote] = useState<string | null>(null);
+  const [advisorLoading, setAdvisorLoading] = useState(false);
+  useEffect(() => {
+    setAdvisorNote(null);
+    setAdvisorLoading(false);
+    if (!advisorEnabled || !activeCard || !activeWhy || activeWhy.length === 0) return;
+    const card = {
+      id: activeCard.id, name: activeCard.name, issuer: activeCard.issuer,
+      annualFee: activeCard.facts.annualFee, rewards: activeCard.facts.rewards,
+      topPerk: activeCard.facts.topPerk, bonus: activeCard.facts.bonus, tags: activeCard.tags,
+    };
+    const profile = {
+      ownedCardNames: ownedCards.map((id) => allCards.find((c) => c.id === id)?.name).filter(Boolean) as string[],
+      spend: matchAnswers?.spend as Record<string, number> | undefined,
+      credit: matchAnswers?.credit as string | undefined,
+      maxFee: matchAnswers?.maxFee as number | undefined,
+      rewardPref: activeFilters.includes('cashback') ? 'cash back' : activeFilters.includes('rewards') ? 'points/miles' : 'no preference',
+      whyBullets: activeWhy,
+    };
+    let cancelled = false;
+    setAdvisorLoading(true);
+    fetchAdvisorNote(card, profile).then((note) => {
+      if (!cancelled) { setAdvisorNote(note); setAdvisorLoading(false); }
+    });
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeCard?.id, matchMode, explanations]);
 
   return (
     <section className="compare-light relative w-full min-h-screen pt-24 pb-24 flex flex-col items-center overflow-hidden bg-[var(--cl-bg)]">
@@ -256,6 +287,21 @@ export default function CardCarousel({
                   </li>
                 ))}
               </ul>
+              {(advisorLoading || advisorNote) && (
+                <div className="mt-3.5 pt-3.5 border-t border-[var(--cl-hairline)]">
+                  {advisorLoading ? (
+                    <div className="flex items-center gap-2 text-xs text-[var(--cl-muted)]">
+                      <Sparkles className="w-3.5 h-3.5 animate-pulse text-[var(--cl-gold)]" />
+                      <span>Analyzing your wallet…</span>
+                    </div>
+                  ) : (
+                    <div className="flex gap-2.5">
+                      <Sparkles className="w-4 h-4 mt-[0.15em] text-[var(--cl-gold)] shrink-0" />
+                      <p className="text-sm text-[var(--cl-ink)] leading-relaxed">{advisorNote}</p>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </motion.div>
         </AnimatePresence>
