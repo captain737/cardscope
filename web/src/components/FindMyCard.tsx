@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight, X, Search, Plus } from 'lucide-react';
 import { normalizeFilters } from '../lib/filters';
 import { loadProfile } from '../lib/profile';
 import { loadRemoteProfile } from '../lib/remoteProfile';
+import { cardMatchesQuery } from '../lib/cardSearch';
 import { useCards } from '../hooks/useCards';
 import type { MatchResult } from '../App';
 
@@ -338,7 +339,7 @@ function OwnedCardsStep({ answers, set }: StepProps) {
   const { cards } = useCards();
   const [query, setQuery] = useState('');
   const matches = query.trim()
-    ? cards.filter(c => c.name.toLowerCase().includes(query.toLowerCase()) || c.issuer.toLowerCase().includes(query.toLowerCase())).slice(0, 6)
+    ? cards.filter(c => cardMatchesQuery(c, query)).slice(0, 6)
     : [];
   const add = (id: string) => { if (!answers.ownedCards.includes(id)) set({ ownedCards: [...answers.ownedCards, id] }); setQuery(''); };
   const remove = (id: string) => set({ ownedCards: answers.ownedCards.filter(x => x !== id) });

@@ -6,6 +6,7 @@ import CardVisual from './CardVisual';
 import { CreditCard } from '../types';
 import { cardRewardBullets, leadWithNumber } from '../lib/rewards';
 import { aprSections } from '../lib/apr';
+import { cardMatchesQuery } from '../lib/cardSearch';
 
 interface CompareProps {
   watchlist: string[];
@@ -127,11 +128,7 @@ export default function Compare({ watchlist, setWatchlist, ownedCards, setOwnedC
     setSlots((prev) => prev.map((_, i) => shuffled[i]));
   };
 
-  const filteredCards = allCards.filter(
-    (c) =>
-      c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.issuer.toLowerCase().includes(searchQuery.toLowerCase()),
-  );
+  const filteredCards = allCards.filter((c) => cardMatchesQuery(c, searchQuery));
 
   const hasAny = slots.some((s) => s);
 
