@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
-import { X, Search, Shuffle, Wallet, Bookmark, Check, Minus, ArrowUpRight, Plus } from 'lucide-react';
+import { X, Search, Shuffle, Wallet, Bookmark, Check, Minus, ArrowUpRight, Plus, Clock } from 'lucide-react';
 import { useCards } from '../hooks/useCards';
 import CardVisual from './CardVisual';
 import { CreditCard } from '../types';
+import { getRecentlyViewed, removeRecentlyViewed } from '../lib/recentlyViewed';
 import { cardRewardBullets, leadWithNumber } from '../lib/rewards';
 import { aprSections } from '../lib/apr';
 import { cardMatchesQuery } from '../lib/cardSearch';
@@ -63,6 +64,9 @@ export default function Compare({ watchlist, setWatchlist, ownedCards, setOwnedC
   const [activeSlot, setActiveSlot] = useState<number | 'watchlist' | 'new' | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const reduce = useReducedMotion();
+  // Recently viewed cards (localStorage), loaded once on mount.
+  const [recent, setRecent] = useState<string[]>([]);
+  useEffect(() => setRecent(getRecentlyViewed()), []);
 
   const cardAt = (i: number) => allCards.find((c) => c.id === slots[i]);
 
@@ -171,6 +175,20 @@ export default function Compare({ watchlist, setWatchlist, ownedCards, setOwnedC
             }
           />
         </div>
+
+        {/* Recently viewed — quick access to cards you just looked at */}
+        {recent.filter((id) => allCards.some((c) => c.id === id)).length > 0 && (
+          <div className="flex justify-center mb-14 -mt-6">
+            <Rail
+              label="Recently Viewed"
+              icon={<Clock className="w-3.5 h-3.5" />}
+              ids={recent.filter((id) => allCards.some((c) => c.id === id))}
+              allCards={allCards}
+              onDragStart={handleDragStart}
+              onRemove={(id) => setRecent(removeRecentlyViewed(id))}
+            />
+          </div>
+        )}
 
         {/* Shuffle control */}
         <div className="flex justify-end mb-4">

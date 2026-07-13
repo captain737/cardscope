@@ -6,6 +6,8 @@ import CardFacts from './CardFacts';
 import BubbleFilters from './BubbleFilters';
 import { buildDeck } from '../lib/ranking';
 import { fetchAdvisorNote, advisorEnabled } from '../lib/advisor';
+import { pushRecentlyViewed } from '../lib/recentlyViewed';
+import CardInsightsPanel from './CardInsightsPanel';
 import { useCards } from '../hooks/useCards';
 import { CreditCard } from '../types';
 
@@ -141,6 +143,11 @@ export default function CardCarousel({
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeCard?.id, matchMode, explanations]);
+
+  // Remember the focused card for the "Recently viewed" rail (Compare page).
+  useEffect(() => {
+    if (activeCard) pushRecentlyViewed(activeCard.id);
+  }, [activeCard?.id]);
 
   return (
     <section className="compare-light relative w-full min-h-screen pt-24 pb-24 flex flex-col items-center overflow-hidden bg-[var(--cl-bg)]">
@@ -300,6 +307,16 @@ export default function CardCarousel({
       <div className="relative z-20 w-full mt-4 md:mt-5">
         <CardFacts card={activeCard} watchlist={watchlist} setWatchlist={setWatchlist} />
       </div>
+
+      {/* Enhanced profile: contextual insights, pros/cons, tradeoffs, similar */}
+      <CardInsightsPanel
+        card={activeCard}
+        allCards={allCards}
+        onSelectCard={(id) => {
+          const idx = cards.findIndex((c) => c.id === id);
+          if (idx >= 0) setCurrentIndex(idx);
+        }}
+      />
 
       {/* Data provenance footnote */}
       <p className="relative z-10 font-mono text-xs text-[var(--cl-muted)] tracking-wide mt-12 px-4 text-center">
