@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
-import { X, Search, Shuffle, Wallet, Bookmark, Check, Minus, ArrowUpRight, Plus, Clock } from 'lucide-react';
+import { X, Search, Shuffle, Wallet, Bookmark, Check, Minus, ArrowUpRight, Plus, Clock, ChevronDown } from 'lucide-react';
 import { useCards } from '../hooks/useCards';
 import CardVisual from './CardVisual';
 import { CreditCard } from '../types';
@@ -139,24 +139,17 @@ export default function Compare({ watchlist, setWatchlist, ownedCards, setOwnedC
   return (
     <div className="compare-light min-h-screen bg-[var(--cl-bg)] pt-24 pb-24 px-4 md:px-8">
       <div className="w-full max-w-[80rem] mx-auto">
-        {/* Card rails: the user's own cards, kept separate from the watchlist */}
-        <div className="flex flex-col sm:flex-row items-start justify-center gap-6 mb-14">
-          {ownedCards.length > 0 && (
-            <>
-              <Rail
-                label="My Cards"
-                icon={<Wallet className="w-3.5 h-3.5" />}
-                ids={ownedCards}
-                allCards={allCards}
-                onDragStart={handleDragStart}
-                onRemove={(id) => setOwnedCards((prev) => prev.filter((x) => x !== id))}
-              />
-              <div className="self-stretch hidden sm:flex items-center">
-                <div className="w-px h-full min-h-[150px] bg-[var(--cl-hairline)]" />
-              </div>
-              <div className="w-full h-px sm:hidden bg-[var(--cl-hairline)]" />
-            </>
-          )}
+        {/* Wallet panels: My Cards (left) and Watchlist (right), each collapsible */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          <Rail
+            label="My Cards"
+            icon={<Wallet className="w-3.5 h-3.5" />}
+            ids={ownedCards}
+            allCards={allCards}
+            onDragStart={handleDragStart}
+            onRemove={(id) => setOwnedCards((prev) => prev.filter((x) => x !== id))}
+            emptyHint="Cards you own will show here."
+          />
           <Rail
             label="Watchlist"
             icon={<Bookmark className="w-3.5 h-3.5" />}
@@ -176,9 +169,9 @@ export default function Compare({ watchlist, setWatchlist, ownedCards, setOwnedC
           />
         </div>
 
-        {/* Recently viewed — quick access to cards you just looked at */}
+        {/* Recently viewed — full-width row beneath the two panels */}
         {recent.filter((id) => allCards.some((c) => c.id === id)).length > 0 && (
-          <div className="flex justify-center mb-14 -mt-6">
+          <div className="mb-14">
             <Rail
               label="Recently Viewed"
               icon={<Clock className="w-3.5 h-3.5" />}
@@ -523,6 +516,7 @@ function Rail({
   onDragStart,
   onRemove,
   addButton,
+  emptyHint,
 }: {
   label: string;
   icon: React.ReactNode;
@@ -531,42 +525,68 @@ function Rail({
   onDragStart: (e: React.DragEvent, id: string) => void;
   onRemove: (id: string) => void;
   addButton?: React.ReactNode;
+  emptyHint?: string;
 }) {
+  const [open, setOpen] = useState(true);
+  const known = ids.filter((id) => allCards.some((c) => c.id === id));
   return (
-    <div className="flex flex-col items-center gap-6 min-w-0">
-      <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--cl-muted)] flex items-center gap-1.5">
-        <span className="text-[var(--cl-gold)]">{icon}</span> {label}
-      </span>
-      <div className="flex gap-4 overflow-x-auto pt-2 pb-2 hide-scrollbar max-w-full">
-        {ids.map((id) => {
-          const card = allCards.find((c) => c.id === id);
-          if (!card) return null;
-          return (
-            <div
-              key={id}
-              draggable
-              onDragStart={(e) => onDragStart(e, id)}
-              className="shrink-0 relative w-[96px] h-[144px] md:w-[112px] md:h-[168px] cursor-grab active:cursor-grabbing group"
-            >
-              {/* Clip the card art (and its heavy drop-shadow) to a neat,
-                  card-shaped rectangle so it sits flat in the rail. */}
-              <div className="absolute inset-0 overflow-hidden rounded-[0.7rem]">
-                <div className="absolute top-0 left-0 pointer-events-none origin-top-left scale-[0.4]">
-                  <CardVisual card={card} />
-                </div>
-              </div>
-              <button
-                onClick={() => onRemove(id)}
-                aria-label={`Remove ${card.name}`}
-                className="absolute top-1.5 right-1.5 bg-[var(--cl-bg)] text-[var(--cl-muted)] hover:text-[var(--cl-ink)] p-1 rounded-full border border-[var(--cl-hairline-strong)] shadow-sm opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity z-30"
-              >
-                <X className="w-3 h-3" />
-              </button>
+    <div className="rounded-2xl border border-[var(--cl-hairline)] bg-[var(--cl-panel)]/40 px-4 py-3 min-w-0">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        className="w-full flex items-center justify-between gap-2"
+      >
+        <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--cl-muted)] flex items-center gap-1.5">
+          <span className="text-[var(--cl-gold)]">{icon}</span> {label}
+          <span className="text-[var(--cl-muted)]/70 normal-case tracking-normal">({known.length})</span>
+        </span>
+        <ChevronDown className={`w-4 h-4 text-[var(--cl-muted)] transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+            className="overflow-hidden"
+          >
+            <div className="flex gap-4 overflow-x-auto pt-3 pb-1 hide-scrollbar max-w-full">
+              {known.map((id) => {
+                const card = allCards.find((c) => c.id === id)!;
+                return (
+                  <div
+                    key={id}
+                    draggable
+                    onDragStart={(e) => onDragStart(e, id)}
+                    className="shrink-0 relative w-[96px] h-[144px] md:w-[112px] md:h-[168px] cursor-grab active:cursor-grabbing group"
+                  >
+                    {/* Clip the card art (and its heavy drop-shadow) to a neat,
+                        card-shaped rectangle so it sits flat in the rail. */}
+                    <div className="absolute inset-0 overflow-hidden rounded-[0.7rem]">
+                      <div className="absolute top-0 left-0 pointer-events-none origin-top-left scale-[0.4]">
+                        <CardVisual card={card} />
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => onRemove(id)}
+                      aria-label={`Remove ${card.name}`}
+                      className="absolute top-1.5 right-1.5 bg-[var(--cl-bg)] text-[var(--cl-muted)] hover:text-[var(--cl-ink)] p-1 rounded-full border border-[var(--cl-hairline-strong)] shadow-sm opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity z-30"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                );
+              })}
+              {addButton}
+              {known.length === 0 && !addButton && (
+                <p className="text-sm text-[var(--cl-muted)] py-10 px-1">{emptyHint || 'Nothing here yet.'}</p>
+              )}
             </div>
-          );
-        })}
-        {addButton}
-      </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
