@@ -39,6 +39,8 @@ export default function CardCarousel({
   const [ranked, setRanked] = useState(false);
   const [complement, setComplement] = useState(false);
   const [aboveLimit, setAboveLimit] = useState<CreditCard[]>([]);
+  // Per-card "why this fits you" bullets from the recommender (match mode).
+  const [explanations, setExplanations] = useState<Record<string, string[]>>({});
   const [currentIndex, setCurrentIndex] = useState(0);
   const [nonce, setNonce] = useState(0); // bump to force a reshuffle
   const [providerFilter, setProviderFilter] = useState('all');
@@ -59,6 +61,7 @@ export default function CardCarousel({
     setRanked(result.ranked);
     setComplement(result.complement);
     setAboveLimit(result.aboveAnnualFeeLimit?.map((r) => r.card) || []);
+    setExplanations(Object.fromEntries((result.results || []).map((r) => [r.card.id, r.explanation])));
     setCurrentIndex(0);
   }, [allCards, activeFilters, ownedCards, matchMode, matchAnswers, nonce, providerFilter]);
 
@@ -94,6 +97,8 @@ export default function CardCarousel({
 
   const activeCard = cards[currentIndex];
   const rankLabel = complement ? 'best choice for you' : 'best match';
+  // Show the tailored reasoning only in match mode (Find Me a Card results).
+  const activeWhy = matchMode && activeCard ? explanations[activeCard.id] : undefined;
 
   return (
     <section className="compare-light relative w-full min-h-screen pt-24 pb-24 flex flex-col items-center overflow-hidden bg-[var(--cl-bg)]">
@@ -229,6 +234,32 @@ export default function CardCarousel({
           </motion.div>
         </AnimatePresence>
       </div>
+
+      {/* Why this fits you — tailored reasoning from the recommender */}
+      {activeWhy && activeWhy.length > 0 && (
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={activeCard.id + '-why'}
+            initial={{ opacity: 0, y: reducedMotion ? 0 : 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, transition: { duration: 0.12 } }}
+            transition={{ duration: reducedMotion ? 0 : 0.3, ease: [0.16, 1, 0.3, 1] }}
+            className="relative z-20 w-full max-w-xl mx-auto mt-6 px-4"
+          >
+            <div className="rounded-2xl border border-[var(--cl-hairline)] bg-[var(--cl-panel)] p-4 md:p-5 text-left">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--cl-gold)] mb-2.5">Why this fits you</p>
+              <ul className="flex flex-col gap-2">
+                {activeWhy.map((line, i) => (
+                  <li key={i} className="flex gap-2.5 text-sm text-[var(--cl-ink)] leading-relaxed">
+                    <span aria-hidden className="mt-[0.55em] h-1 w-1 rounded-full bg-[var(--cl-gold)] shrink-0" />
+                    <span>{line}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </motion.div>
+        </AnimatePresence>
+      )}
 
       {/* Facts Section */}
       <div className="relative z-20 w-full mt-4 md:mt-5">
