@@ -57,6 +57,9 @@ export default function CardCarousel({
   const [currentIndex, setCurrentIndex] = useState(0);
   const [nonce, setNonce] = useState(0); // bump to force a reshuffle
   const [providerFilter, setProviderFilter] = useState('all');
+  // Landing state: on first load show only the centered search + filters; the
+  // deck appears once the user searches or picks a filter.
+  const [started, setStarted] = useState(false);
   const reducedMotion = useReducedMotion();
 
   // Distinct providers present in the deck, for the filter dropdown.
@@ -110,6 +113,9 @@ export default function CardCarousel({
 
   const activeCard = cards[currentIndex];
   const rankLabel = complement ? 'best choice for you' : 'best match';
+  // Results appear once the user has expressed intent — a match, a filter, or
+  // a search. Otherwise the page shows just the centered search + filters.
+  const showResults = matchMode || started || activeFilters.length > 0;
   // Show the tailored reasoning only in match mode (Find Me a Card results).
   const activeWhy = matchMode && activeCard ? explanations[activeCard.id] : undefined;
   // The two strongest reasons, shown as centered bullets under the rank badge.
@@ -145,10 +151,34 @@ export default function CardCarousel({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeCard?.id, matchMode, explanations]);
 
-  // Remember the focused card for the "Recently viewed" rail (Compare page).
+  // Remember the focused card for the "Recently viewed" rail (Compare page) —
+  // only once results are shown, so the hero deck doesn't pollute the list.
   useEffect(() => {
-    if (activeCard) pushRecentlyViewed(activeCard.id);
-  }, [activeCard?.id]);
+    if (showResults && activeCard) pushRecentlyViewed(activeCard.id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeCard?.id, showResults]);
+
+  // Landing hero: nothing but the search + filters, centered on the page.
+  if (!showResults) {
+    return (
+      <section className="compare-light relative w-full min-h-screen flex flex-col items-center justify-center px-4 bg-[var(--cl-bg)]">
+        <div className="w-full max-w-2xl flex flex-col items-center gap-7 -mt-16">
+          <div className="text-center">
+            <h1 className="font-display font-semibold text-4xl md:text-5xl text-[var(--cl-ink)] text-balance">Find what fits you best</h1>
+            <p className="mt-3 text-[var(--cl-muted)]">Describe your ideal card, or tap a filter to begin.</p>
+          </div>
+          <AISearchBar
+            onQueryChange={(q) => { if (q.trim()) setStarted(true); }}
+            onFiltersParsed={(f) => { setActiveFilters(f); setStarted(true); }}
+          />
+          <BubbleFilters
+            activeFilters={activeFilters}
+            onFiltersChange={(f) => { setActiveFilters(f); setStarted(true); }}
+          />
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="compare-light relative w-full min-h-screen pt-24 pb-24 flex flex-col items-center overflow-hidden bg-[var(--cl-bg)]">
@@ -158,7 +188,7 @@ export default function CardCarousel({
             <h2 className="font-display font-semibold text-3xl md:text-4xl text-[var(--cl-ink)]">Your best matches</h2>
           </div>
           <button
-            onClick={onBrowseAll}
+            onClick={() => { setStarted(true); onBrowseAll(); }}
             className="h-9 px-4 rounded-full bg-transparent border border-[var(--cl-hairline-strong)] flex items-center gap-2 hover:bg-[var(--cl-panel)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cl-ink)]/30 transition-colors text-[var(--cl-muted)] hover:text-[var(--cl-ink)] text-sm font-medium"
           >
             Browse all cards instead
