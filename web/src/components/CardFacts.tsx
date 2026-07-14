@@ -29,7 +29,7 @@ export default function CardFacts({ card }: CardFactsProps) {
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, transition: { duration: 0.15 } }}
         transition={{ duration: reducedMotion ? 0 : 0.35, ease: [0.16, 1, 0.3, 1] }}
-        className="w-full max-w-5xl mx-auto px-4"
+        className="w-full max-w-6xl mx-auto px-4"
       >
         <div className="grid grid-cols-1 md:grid-cols-3">
           {cells.map((cell, i) => (

@@ -189,8 +189,11 @@ export default function CardCarousel({
 
       {activeCard ? (
       <>
-      {/* Upper (~50vh): card carousel (left) + compact analysis (right) */}
-      <div className="relative z-10 w-full max-w-[92rem] px-4 md:px-8 grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-10 lg:h-[50vh] shrink-0">
+      {/* Upper (top 50% of the page): carousel (left) + analysis (right).
+          The section's pt-20 (5rem) is subtracted so the block ends exactly at
+          the 50vh line and the card name below always starts at the same
+          point. */}
+      <div className="relative z-10 w-full px-6 md:px-12 grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-12 lg:h-[calc(50vh-5rem)] shrink-0">
         {/* Navigation arrows at the section edges, aligned to the card row */}
         <button
           onClick={prevCard}
@@ -258,7 +261,7 @@ export default function CardCarousel({
       </div>
 
       {/* Lower: card identity with inline actions + headline facts */}
-      <div aria-live="polite" className="relative z-20 w-full lg:flex-1 lg:min-h-0 flex flex-col items-center justify-center gap-4 px-4 mt-6 lg:mt-0">
+      <div aria-live="polite" className="relative z-20 w-full lg:flex-1 lg:min-h-0 flex flex-col items-center justify-center lg:justify-start gap-4 px-4 mt-6 lg:mt-0">
         <AnimatePresence mode="wait">
           <motion.div
             key={activeCard.id}

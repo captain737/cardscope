@@ -99,7 +99,7 @@ export default function AISearchBar({ onQueryChange, onFiltersParsed, leftSlot }
   };
 
   return (
-    <div className="relative w-full max-w-4xl mx-auto">
+    <div className="relative w-full max-w-5xl mx-auto">
       <div className="flex items-center gap-1.5 rounded-[28px] bg-[var(--cl-panel)] border border-[var(--cl-hairline-strong)] shadow-[0_8px_24px_-12px_rgb(0_0_0_/_0.25)] pl-3 pr-2.5 py-2.5 focus-within:border-[var(--cl-ink)] transition-colors">
         {leftSlot && (
           <div className="shrink-0 flex items-center pr-2.5 mr-1 border-r border-[var(--cl-hairline-strong)]">{leftSlot}</div>
