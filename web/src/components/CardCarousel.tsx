@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
-import { ChevronLeft, ChevronRight, ChevronDown, Shuffle, Sparkles, Plus, X, ArrowUpRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ChevronDown, Sparkles, Plus, X, ArrowUpRight } from 'lucide-react';
 import CardVisual from './CardVisual';
 import CardFacts from './CardFacts';
 import BubbleFilters from './BubbleFilters';
@@ -55,7 +55,6 @@ export default function CardCarousel({
   // Per-card "why this fits you" bullets from the recommender (match mode).
   const [explanations, setExplanations] = useState<Record<string, string[]>>({});
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [nonce, setNonce] = useState(0); // bump to force a reshuffle
   const [providerFilter, setProviderFilter] = useState('all');
   // Landing state: on first load show only the centered search + filters; the
   // deck appears once the user searches or picks a filter.
@@ -79,7 +78,7 @@ export default function CardCarousel({
     setAboveLimit(result.aboveAnnualFeeLimit?.map((r) => r.card) || []);
     setExplanations(Object.fromEntries((result.results || []).map((r) => [r.card.id, r.explanation])));
     setCurrentIndex(0);
-  }, [allCards, activeFilters, ownedCards, matchMode, matchAnswers, nonce, providerFilter]);
+  }, [allCards, activeFilters, ownedCards, matchMode, matchAnswers, providerFilter]);
 
   const nextCard = useCallback(() => {
     setCurrentIndex((prev) => (prev + 1) % cards.length);
@@ -100,12 +99,6 @@ export default function CardCarousel({
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [nextCard, prevCard]);
-
-  // Shuffle clears filters and re-draws a random browse deck.
-  const shuffleCards = useCallback(() => {
-    if (activeFilters.length) setActiveFilters([]);
-    setNonce((n) => n + 1);
-  }, [activeFilters.length, setActiveFilters]);
 
   const cardTransition = reducedMotion
     ? { duration: 0 }
@@ -181,7 +174,7 @@ export default function CardCarousel({
   }
 
   return (
-    <section className="compare-light relative w-full min-h-screen pt-24 pb-24 flex flex-col items-center overflow-hidden bg-[var(--cl-bg)]">
+    <section className="compare-light relative w-full min-h-screen lg:h-screen lg:overflow-hidden pt-20 pb-3 flex flex-col items-center bg-[var(--cl-bg)]">
       {matchMode && (
         <div className="relative z-20 w-full flex flex-col items-center gap-3 px-4 text-center mb-2">
           <h2 className="font-display font-semibold text-3xl md:text-4xl text-[var(--cl-ink)]">Your best matches</h2>
@@ -196,26 +189,26 @@ export default function CardCarousel({
 
       {activeCard ? (
       <>
-      {/* Upper: card carousel (left) + full analysis (right) */}
-      <div className="relative z-10 w-full max-w-7xl px-4 md:px-8 grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-start">
+      {/* Upper (~50vh): card carousel (left) + compact analysis (right) */}
+      <div className="relative z-10 w-full max-w-7xl px-4 md:px-8 grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-10 lg:h-[50vh] shrink-0">
         {/* Navigation arrows at the section edges, aligned to the card row */}
         <button
           onClick={prevCard}
           aria-label="Previous card"
-          className="hidden md:flex absolute left-0 top-[170px] lg:top-[210px] -translate-y-1/2 z-30 p-3 rounded-full bg-[var(--cl-bg)] border border-[var(--cl-hairline-strong)] shadow-sm hover:bg-[var(--cl-panel)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cl-ink)]/30 transition-colors text-[var(--cl-muted)] hover:text-[var(--cl-ink)]"
+          className="hidden lg:flex absolute left-0 top-1/2 -translate-y-1/2 z-30 p-3 rounded-full bg-[var(--cl-bg)] border border-[var(--cl-hairline-strong)] shadow-sm hover:bg-[var(--cl-panel)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cl-ink)]/30 transition-colors text-[var(--cl-muted)] hover:text-[var(--cl-ink)]"
         >
           <ChevronLeft className="w-6 h-6" />
         </button>
         <button
           onClick={nextCard}
           aria-label="Next card"
-          className="hidden md:flex absolute right-0 top-[170px] lg:top-[210px] -translate-y-1/2 z-30 p-3 rounded-full bg-[var(--cl-bg)] border border-[var(--cl-hairline-strong)] shadow-sm hover:bg-[var(--cl-panel)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cl-ink)]/30 transition-colors text-[var(--cl-muted)] hover:text-[var(--cl-ink)]"
+          className="hidden lg:flex absolute right-0 top-1/2 -translate-y-1/2 z-30 p-3 rounded-full bg-[var(--cl-bg)] border border-[var(--cl-hairline-strong)] shadow-sm hover:bg-[var(--cl-panel)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cl-ink)]/30 transition-colors text-[var(--cl-muted)] hover:text-[var(--cl-ink)]"
         >
           <ChevronRight className="w-6 h-6" />
         </button>
 
         {/* Left: card carousel */}
-        <div className="relative h-[340px] md:h-[420px] flex items-center justify-center perspective-[1200px] overflow-hidden">
+        <div className="relative h-[300px] lg:h-full flex items-center justify-center perspective-[1200px] overflow-hidden">
           <div className="relative w-full h-full flex justify-center items-center transform-style-3d">
           <AnimatePresence initial={false}>
             {cards.map((card, index) => {
@@ -260,19 +253,12 @@ export default function CardCarousel({
           </div>
         </div>
 
-        {/* Right: full analysis, always expanded */}
-        <CardInsightsPanel
-          card={activeCard}
-          allCards={allCards}
-          onSelectCard={(id) => {
-            const idx = cards.findIndex((c) => c.id === id);
-            if (idx >= 0) setCurrentIndex(idx);
-          }}
-        />
+        {/* Right: compact analysis */}
+        <CardInsightsPanel card={activeCard} />
       </div>
 
-      {/* Lower: card identity + actions + headline facts */}
-      <div aria-live="polite" className="relative z-20 w-full mt-10 md:mt-12 px-4">
+      {/* Lower: card identity with inline actions + headline facts */}
+      <div aria-live="polite" className="relative z-20 w-full lg:flex-1 lg:min-h-0 flex flex-col items-center justify-center gap-4 px-4 mt-6 lg:mt-0">
         <AnimatePresence mode="wait">
           <motion.div
             key={activeCard.id}
@@ -280,17 +266,53 @@ export default function CardCarousel({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, transition: { duration: 0.12 } }}
             transition={{ duration: reducedMotion ? 0 : 0.3, ease: [0.16, 1, 0.3, 1] }}
-            className="flex flex-col items-center text-center"
+            className="w-full flex flex-col items-center"
           >
-            <p className="text-xs font-semibold uppercase tracking-wider text-[var(--cl-gold)] mb-1.5">{activeCard.issuer}</p>
-            <h1 className="font-display font-semibold text-3xl md:text-4xl text-[var(--cl-ink)] text-balance">{activeCard.name}</h1>
-            {ranked && (
-              <p className="mt-2 text-sm font-medium text-[var(--cl-muted)]">
-                <span className="text-[var(--cl-gold)] font-semibold">#{currentIndex + 1}</span> {rankLabel}
-              </p>
-            )}
+            {/* Card name + Watchlist/Visit on one line */}
+            <div className="flex items-center justify-center gap-x-8 gap-y-3 flex-wrap">
+              <div className="text-center">
+                <p className="text-xs font-semibold uppercase tracking-wider text-[var(--cl-gold)] mb-1">{activeCard.issuer}</p>
+                <h1 className="font-display font-semibold text-2xl md:text-3xl text-[var(--cl-ink)] text-balance">{activeCard.name}</h1>
+                {ranked && (
+                  <p className="mt-1 text-sm font-medium text-[var(--cl-muted)]">
+                    <span className="text-[var(--cl-gold)] font-semibold">#{currentIndex + 1}</span> {rankLabel}
+                  </p>
+                )}
+              </div>
+              <div className="flex items-center gap-5">
+                <div className="flex flex-col items-center gap-1">
+                  <button
+                    onClick={() => setWatchlist((prev) => (prev.includes(activeCard.id) ? prev.filter((id) => id !== activeCard.id) : [...prev, activeCard.id]))}
+                    aria-label={watchlist.includes(activeCard.id) ? `Remove ${activeCard.name} from watchlist` : `Add ${activeCard.name} to watchlist`}
+                    className="w-11 h-11 rounded-full bg-transparent border border-[var(--cl-hairline-strong)] text-[var(--cl-muted)] hover:text-[var(--cl-ink)] hover:border-[var(--cl-ink)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cl-ink)]/30 transition-colors flex items-center justify-center"
+                  >
+                    {watchlist.includes(activeCard.id) ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+                  </button>
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--cl-muted)]">{watchlist.includes(activeCard.id) ? 'Saved' : 'Watchlist'}</span>
+                </div>
+                <div className="flex flex-col items-center gap-1">
+                  {activeCard.applyUrl ? (
+                    <a
+                      href={activeCard.applyUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label={`Visit ${activeCard.name} on the issuer's site`}
+                      className="w-11 h-11 rounded-full bg-[var(--cl-pill)] text-[var(--cl-pill-ink)] hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cl-ink)]/40 transition-opacity flex items-center justify-center"
+                    >
+                      <ArrowUpRight className="w-4 h-4" />
+                    </a>
+                  ) : (
+                    <span aria-hidden="true" title="Application link unavailable" className="w-11 h-11 rounded-full bg-[var(--cl-pill)]/30 text-[var(--cl-pill-ink)]/50 flex items-center justify-center cursor-not-allowed">
+                      <ArrowUpRight className="w-4 h-4" />
+                    </span>
+                  )}
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--cl-gold)]">Visit</span>
+                </div>
+              </div>
+            </div>
+
             {activeWhy && activeWhy.length > 0 && (
-              <ul className="mt-3 flex flex-col items-center gap-1.5">
+              <ul className="mt-3 flex flex-col items-center gap-1">
                 {topReasons.map((line, i) => (
                   <li key={i} className="flex items-baseline justify-center gap-2 text-sm text-[var(--cl-ink)]">
                     <span aria-hidden className="h-1 w-1 rounded-full bg-[var(--cl-gold)] shrink-0" />
@@ -300,61 +322,21 @@ export default function CardCarousel({
               </ul>
             )}
             {advisorLoading ? (
-              <p className="mt-2.5 flex items-center justify-center gap-2 text-xs text-[var(--cl-muted)]">
+              <p className="mt-2 flex items-center justify-center gap-2 text-xs text-[var(--cl-muted)]">
                 <Sparkles className="w-3.5 h-3.5 animate-pulse text-[var(--cl-gold)]" /> Analyzing your wallet…
               </p>
             ) : advisorNote ? (
-              <p className="mt-2.5 max-w-md mx-auto text-sm text-[var(--cl-ink)] leading-relaxed">
+              <p className="mt-2 max-w-md mx-auto text-sm text-[var(--cl-ink)] leading-relaxed text-center">
                 <Sparkles className="inline w-3.5 h-3.5 text-[var(--cl-gold)] mr-1 align-[-0.15em]" />{advisorNote}
               </p>
             ) : null}
-
-            {/* Watchlist + Visit */}
-            <div className="mt-5 flex items-center justify-center gap-8">
-              <div className="flex flex-col items-center gap-1.5">
-                <button
-                  onClick={() => setWatchlist((prev) => (prev.includes(activeCard.id) ? prev.filter((id) => id !== activeCard.id) : [...prev, activeCard.id]))}
-                  aria-label={watchlist.includes(activeCard.id) ? `Remove ${activeCard.name} from watchlist` : `Add ${activeCard.name} to watchlist`}
-                  className="w-11 h-11 rounded-full bg-transparent border border-[var(--cl-hairline-strong)] text-[var(--cl-muted)] hover:text-[var(--cl-ink)] hover:border-[var(--cl-ink)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cl-ink)]/30 transition-colors flex items-center justify-center"
-                >
-                  {watchlist.includes(activeCard.id) ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
-                </button>
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--cl-muted)]">{watchlist.includes(activeCard.id) ? 'Saved' : 'Watchlist'}</span>
-              </div>
-              <div className="flex flex-col items-center gap-1.5">
-                {activeCard.applyUrl ? (
-                  <a
-                    href={activeCard.applyUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    aria-label={`Visit ${activeCard.name} on the issuer's site`}
-                    className="w-11 h-11 rounded-full bg-[var(--cl-pill)] text-[var(--cl-pill-ink)] hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cl-ink)]/40 transition-opacity flex items-center justify-center"
-                  >
-                    <ArrowUpRight className="w-4 h-4" />
-                  </a>
-                ) : (
-                  <span aria-hidden="true" title="Application link unavailable" className="w-11 h-11 rounded-full bg-[var(--cl-pill)]/30 text-[var(--cl-pill-ink)]/50 flex items-center justify-center cursor-not-allowed">
-                    <ArrowUpRight className="w-4 h-4" />
-                  </span>
-                )}
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--cl-gold)]">Visit</span>
-              </div>
-            </div>
           </motion.div>
         </AnimatePresence>
 
         {/* Headline facts: Annual Fee · Rewards · Sign-up Bonus */}
-        <div className="mt-8">
-          <CardFacts card={activeCard} />
-        </div>
+        <CardFacts card={activeCard} />
       </div>
 
-      {/* Data provenance footnote */}
-      <p className="relative z-10 font-mono text-xs text-[var(--cl-muted)] tracking-wide mt-12 px-4 text-center">
-        {ranked
-          ? `${cards.length} ${complement ? 'complementary' : 'matching'} card${cards.length === 1 ? '' : 's'} · ranked best-first`
-          : `${cards.length} of ${allCards.length} cards · data crawled daily from issuer sites`}
-      </p>
       {matchMode && aboveLimit.length > 0 && (
         <div className="relative z-10 mt-5 w-full max-w-3xl px-4">
           <div className="border-t border-[var(--cl-hairline)] pt-4 text-center">
@@ -379,36 +361,26 @@ export default function CardCarousel({
         </div>
       )}
 
-      {/* Persistent refine bar at the bottom: search + filters + provider/shuffle */}
+      {/* Bottom refine bar: search + filters + provider */}
       {!matchMode && (
-        <div className="relative z-20 w-full mt-16 flex flex-col items-center gap-5">
+        <div className="relative z-20 w-full shrink-0 flex flex-col items-center gap-3 pt-2">
           <div className="w-full px-4">
             <AISearchBar onQueryChange={(q) => { if (q.trim()) setStarted(true); }} onFiltersParsed={setActiveFilters} />
           </div>
           <BubbleFilters activeFilters={activeFilters} onFiltersChange={setActiveFilters} />
-          <div className="flex items-center gap-3">
-            <div className="relative">
-              <select
-                value={providerFilter}
-                onChange={(e) => setProviderFilter(e.target.value)}
-                aria-label="Filter by card provider"
-                className="appearance-none h-10 pl-4 pr-9 rounded-full border border-[var(--cl-hairline-strong)] bg-transparent text-sm font-medium text-[var(--cl-ink)] hover:bg-[var(--cl-panel)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cl-ink)]/30 transition-colors cursor-pointer"
-              >
-                <option value="all">All providers</option>
-                {providers.map((p) => (
-                  <option key={p} value={p}>{providerLabel(p)}</option>
-                ))}
-              </select>
-              <ChevronDown className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-[var(--cl-muted)]" />
-            </div>
-            <button
-              onClick={shuffleCards}
-              aria-label="Shuffle deck and clear filters"
-              className="h-10 px-4 rounded-full bg-transparent border border-[var(--cl-hairline-strong)] flex items-center gap-2 hover:bg-[var(--cl-panel)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cl-ink)]/30 transition-colors text-[var(--cl-ink)]"
+          <div className="relative">
+            <select
+              value={providerFilter}
+              onChange={(e) => setProviderFilter(e.target.value)}
+              aria-label="Filter by card provider"
+              className="appearance-none h-9 pl-4 pr-9 rounded-full border border-[var(--cl-hairline-strong)] bg-transparent text-sm font-medium text-[var(--cl-ink)] hover:bg-[var(--cl-panel)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cl-ink)]/30 transition-colors cursor-pointer"
             >
-              <Shuffle className="w-4 h-4" />
-              <span className="text-sm font-medium">Shuffle</span>
-            </button>
+              <option value="all">All providers</option>
+              {providers.map((p) => (
+                <option key={p} value={p}>{providerLabel(p)}</option>
+              ))}
+            </select>
+            <ChevronDown className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-[var(--cl-muted)]" />
           </div>
         </div>
       )}
