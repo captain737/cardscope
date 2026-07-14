@@ -155,7 +155,7 @@ export default function CardCarousel({
   if (!showResults) {
     return (
       <section className="compare-light relative w-full min-h-screen flex flex-col items-center justify-center px-4 bg-[var(--cl-bg)]">
-        <div className="w-full max-w-2xl flex flex-col items-center gap-7 -mt-16">
+        <div className="w-full max-w-4xl flex flex-col items-center gap-7 -mt-16">
           <div className="text-center">
             <h1 className="font-display font-semibold text-4xl md:text-5xl text-[var(--cl-ink)] text-balance">Find what fits you best</h1>
             <p className="mt-3 text-[var(--cl-muted)]">Describe your ideal card, or tap a filter to begin.</p>
@@ -190,7 +190,7 @@ export default function CardCarousel({
       {activeCard ? (
       <>
       {/* Upper (~50vh): card carousel (left) + compact analysis (right) */}
-      <div className="relative z-10 w-full max-w-7xl px-4 md:px-8 grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-10 lg:h-[50vh] shrink-0">
+      <div className="relative z-10 w-full max-w-[92rem] px-4 md:px-8 grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-10 lg:h-[50vh] shrink-0">
         {/* Navigation arrows at the section edges, aligned to the card row */}
         <button
           onClick={prevCard}
@@ -361,27 +361,32 @@ export default function CardCarousel({
         </div>
       )}
 
-      {/* Bottom refine bar: search + filters + provider */}
+      {/* Bottom refine bar: provider (inside the bar) + search + filters */}
       {!matchMode && (
         <div className="relative z-20 w-full shrink-0 flex flex-col items-center gap-3 pt-2">
           <div className="w-full px-4">
-            <AISearchBar onQueryChange={(q) => { if (q.trim()) setStarted(true); }} onFiltersParsed={setActiveFilters} />
+            <AISearchBar
+              onQueryChange={(q) => { if (q.trim()) setStarted(true); }}
+              onFiltersParsed={setActiveFilters}
+              leftSlot={
+                <div className="relative flex items-center">
+                  <select
+                    value={providerFilter}
+                    onChange={(e) => setProviderFilter(e.target.value)}
+                    aria-label="Filter by card provider"
+                    className="appearance-none bg-transparent text-sm font-medium text-[var(--cl-ink)] pl-1 pr-6 py-1 focus:outline-none cursor-pointer max-w-[9rem] truncate"
+                  >
+                    <option value="all">All providers</option>
+                    {providers.map((p) => (
+                      <option key={p} value={p}>{providerLabel(p)}</option>
+                    ))}
+                  </select>
+                  <ChevronDown className="w-4 h-4 absolute right-0 pointer-events-none text-[var(--cl-muted)]" />
+                </div>
+              }
+            />
           </div>
           <BubbleFilters activeFilters={activeFilters} onFiltersChange={setActiveFilters} />
-          <div className="relative">
-            <select
-              value={providerFilter}
-              onChange={(e) => setProviderFilter(e.target.value)}
-              aria-label="Filter by card provider"
-              className="appearance-none h-9 pl-4 pr-9 rounded-full border border-[var(--cl-hairline-strong)] bg-transparent text-sm font-medium text-[var(--cl-ink)] hover:bg-[var(--cl-panel)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cl-ink)]/30 transition-colors cursor-pointer"
-            >
-              <option value="all">All providers</option>
-              {providers.map((p) => (
-                <option key={p} value={p}>{providerLabel(p)}</option>
-              ))}
-            </select>
-            <ChevronDown className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-[var(--cl-muted)]" />
-          </div>
         </div>
       )}
     </section>

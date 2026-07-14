@@ -12,9 +12,12 @@ const PLACEHOLDERS = [
 interface AISearchBarProps {
   onQueryChange: (query: string) => void;
   onFiltersParsed: (filters: string[]) => void;
+  /** Optional element pinned inside the bar on the left (e.g. a provider
+   *  filter), separated from the input by a divider. */
+  leftSlot?: React.ReactNode;
 }
 
-export default function AISearchBar({ onQueryChange, onFiltersParsed }: AISearchBarProps) {
+export default function AISearchBar({ onQueryChange, onFiltersParsed, leftSlot }: AISearchBarProps) {
   const [value, setValue] = useState('');
   const [parsing, setParsing] = useState(false);
   const [placeholder, setPlaceholder] = useState('');
@@ -96,8 +99,11 @@ export default function AISearchBar({ onQueryChange, onFiltersParsed }: AISearch
   };
 
   return (
-    <div className="relative w-full max-w-2xl mx-auto">
-      <div className="flex items-center gap-2 rounded-[28px] bg-[var(--cl-panel)] border border-[var(--cl-hairline-strong)] shadow-[0_8px_24px_-12px_rgb(0_0_0_/_0.25)] pl-6 pr-2.5 py-2.5 focus-within:border-[var(--cl-ink)] transition-colors">
+    <div className="relative w-full max-w-4xl mx-auto">
+      <div className="flex items-center gap-1.5 rounded-[28px] bg-[var(--cl-panel)] border border-[var(--cl-hairline-strong)] shadow-[0_8px_24px_-12px_rgb(0_0_0_/_0.25)] pl-3 pr-2.5 py-2.5 focus-within:border-[var(--cl-ink)] transition-colors">
+        {leftSlot && (
+          <div className="shrink-0 flex items-center pr-2.5 mr-1 border-r border-[var(--cl-hairline-strong)]">{leftSlot}</div>
+        )}
         <input
           type="text"
           value={value}
@@ -105,7 +111,7 @@ export default function AISearchBar({ onQueryChange, onFiltersParsed }: AISearch
           onKeyDown={e => { if (e.key === 'Enter') submit(); }}
           placeholder={value ? '' : placeholder + (reducedMotion.current ? '' : '|')}
           aria-label="Describe the card you're looking for"
-          className="flex-1 min-w-0 bg-transparent border-none outline-none text-[var(--cl-ink)] placeholder-[var(--cl-muted)] text-[15px] py-1.5"
+          className={`flex-1 min-w-0 bg-transparent border-none outline-none text-[var(--cl-ink)] placeholder-[var(--cl-muted)] text-[15px] py-1.5 ${leftSlot ? 'pl-1' : 'pl-3'}`}
         />
         {value && (
           <button
