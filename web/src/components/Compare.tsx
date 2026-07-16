@@ -1,12 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
-import { X, Search, Shuffle, Wallet, Bookmark, Check, Minus, ArrowUpRight, Plus, Clock, ChevronDown } from 'lucide-react';
+import { X, Search, Shuffle, Wallet, Bookmark, Check, Minus, ArrowUpRight, Plus, ChevronDown, ChevronLeft } from 'lucide-react';
 import { useCards } from '../hooks/useCards';
 import CardVisual from './CardVisual';
 import { CreditCard } from '../types';
-import { getRecentlyViewed, removeRecentlyViewed } from '../lib/recentlyViewed';
 import { cardRewardBullets, leadWithNumber } from '../lib/rewards';
-import { aprSections } from '../lib/apr';
 import { cardMatchesQuery } from '../lib/cardSearch';
 
 interface CompareProps {
@@ -57,16 +55,13 @@ function parity(card: CreditCard): { label: string; state: Tri }[] {
 
 export default function Compare({ watchlist, setWatchlist, ownedCards, setOwnedCards }: CompareProps) {
   const { cards: allCards } = useCards();
-  // Up to three comparison slots. Starts as a 1v1; the "+" adds a third.
+  // Exactly two comparison slots.
   const [slots, setSlots] = useState<(string | null)[]>([null, null]);
 
   const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [activeSlot, setActiveSlot] = useState<number | 'watchlist' | 'new' | null>(null);
+  const [activeSlot, setActiveSlot] = useState<number | 'watchlist' | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const reduce = useReducedMotion();
-  // Recently viewed cards (localStorage), loaded once on mount.
-  const [recent, setRecent] = useState<string[]>([]);
-  useEffect(() => setRecent(getRecentlyViewed()), []);
 
   const cardAt = (i: number) => allCards.find((c) => c.id === slots[i]);
 
@@ -80,14 +75,6 @@ export default function Compare({ watchlist, setWatchlist, ownedCards, setOwnedC
     if (cardId) setSlots((prev) => prev.map((s, idx) => (idx === i ? cardId : s)));
   };
 
-  // Dropping onto the empty middle placeholder materializes the third column
-  // with the dragged card (mirrors addSlot + selectCard's 'new' branch).
-  const handleDropNew = (e: React.DragEvent) => {
-    e.preventDefault();
-    const cardId = e.dataTransfer.getData('cardId');
-    if (cardId) setSlots((prev) => (prev.length >= 3 ? prev : [...prev, cardId]));
-  };
-
   const openSearch = (slot: number | 'watchlist') => {
     setActiveSlot(slot);
     setIsSearchOpen(true);
@@ -97,8 +84,6 @@ export default function Compare({ watchlist, setWatchlist, ownedCards, setOwnedC
   const selectCard = (cardId: string) => {
     if (activeSlot === 'watchlist') {
       if (!watchlist.includes(cardId)) setWatchlist((prev) => [...prev, cardId]);
-    } else if (activeSlot === 'new') {
-      setSlots((prev) => (prev.length >= 3 ? prev : [...prev, cardId]));
     } else if (typeof activeSlot === 'number') {
       const i = activeSlot;
       setSlots((prev) => prev.map((s, idx) => (idx === i ? cardId : s)));
@@ -106,23 +91,12 @@ export default function Compare({ watchlist, setWatchlist, ownedCards, setOwnedC
     setIsSearchOpen(false);
   };
 
-  // Add a third card: opens search; the new column materializes in the
-  // middle once a card is chosen (see selectCard's 'new' branch).
-  const addSlot = () => {
-    if (slots.length >= 3) return;
-    setActiveSlot('new');
-    setIsSearchOpen(true);
-    setSearchQuery('');
-  };
-
-  // X clears the first two slots in place; a third slot is removed outright.
+  // Clears a slot in place rather than removing it — there are always exactly two.
   const removeSlot = (i: number) => {
-    setSlots((prev) =>
-      i >= 2 ? prev.filter((_, idx) => idx !== i) : prev.map((s, idx) => (idx === i ? null : s)),
-    );
+    setSlots((prev) => prev.map((s, idx) => (idx === i ? null : s)));
   };
 
-  // Shuffle fills every current slot with a distinct random card. Prefers the
+  // Shuffle fills both slots with distinct random cards. Prefers the
   // user's own cards + watchlist, falling back to the full deck.
   const shuffleCards = () => {
     const pool = [...new Set([...ownedCards, ...watchlist])];
@@ -132,114 +106,121 @@ export default function Compare({ watchlist, setWatchlist, ownedCards, setOwnedC
     setSlots((prev) => prev.map((_, i) => shuffled[i]));
   };
 
-  const filteredCards = allCards.filter((c) => cardMatchesQuery(c, searchQuery));
+  // Empty query = browse mode: show the whole deck rather than nothing.
+  const filteredCards = searchQuery.trim()
+    ? allCards.filter((c) => cardMatchesQuery(c, searchQuery))
+    : allCards;
 
   const hasAny = slots.some((s) => s);
 
+  const watchlistAddMini = (
+    <button
+      onClick={() => openSearch('watchlist')}
+      className="shrink-0 w-[115px] h-[73px] md:w-[134px] md:h-[85px] rounded-[0.6rem] border-2 border-dashed border-[var(--cl-hairline-strong)] text-[var(--cl-muted)] hover:text-[var(--cl-ink)] hover:border-[var(--cl-ink)] transition-colors flex flex-col items-center justify-center"
+    >
+      <Plus className="w-5 h-5" strokeWidth={1.5} />
+      <span className="text-[11px] mt-0.5">Add</span>
+    </button>
+  );
+
   return (
     <div className="compare-light min-h-screen bg-[var(--cl-bg)] pt-24 pb-24 px-4 md:px-8">
-      <div className="w-full max-w-[80rem] mx-auto">
-        {/* Wallet panels: My Cards (left) and Watchlist (right), each collapsible */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-          <Rail
-            label="My Cards"
-            icon={<Wallet className="w-3.5 h-3.5" />}
-            ids={ownedCards}
-            allCards={allCards}
-            onDragStart={handleDragStart}
-            onRemove={(id) => setOwnedCards((prev) => prev.filter((x) => x !== id))}
-            emptyHint="Cards you own will show here."
-          />
-          <Rail
-            label="Watchlist"
-            icon={<Bookmark className="w-3.5 h-3.5" />}
-            ids={watchlist}
-            allCards={allCards}
-            onDragStart={handleDragStart}
-            onRemove={(id) => setWatchlist((prev) => prev.filter((x) => x !== id))}
-            addButton={
-              <button
-                onClick={() => openSearch('watchlist')}
-                className="shrink-0 w-[96px] h-[144px] md:w-[112px] md:h-[168px] rounded-[0.8rem] border-2 border-dashed border-[var(--cl-hairline-strong)] text-[var(--cl-muted)] hover:text-[var(--cl-ink)] hover:border-[var(--cl-ink)] transition-colors flex flex-col items-center justify-center"
-              >
-                <Plus className="w-6 h-6" strokeWidth={1.5} />
-                <span className="text-xs mt-1">Add</span>
-              </button>
-            }
-          />
-        </div>
+      {/* Mobile / tablet: horizontal wallet rails on top. On desktop these
+          live as vertical drawers on the page edges instead. */}
+      <div className="lg:hidden grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+        <Rail
+          label="My Cards"
+          icon={<Wallet className="w-3.5 h-3.5" />}
+          ids={ownedCards}
+          allCards={allCards}
+          onDragStart={handleDragStart}
+          onRemove={(id) => setOwnedCards((prev) => prev.filter((x) => x !== id))}
+          emptyHint="Cards you own will show here."
+        />
+        <Rail
+          label="Watchlist"
+          icon={<Bookmark className="w-3.5 h-3.5" />}
+          ids={watchlist}
+          allCards={allCards}
+          onDragStart={handleDragStart}
+          onRemove={(id) => setWatchlist((prev) => prev.filter((x) => x !== id))}
+          addButton={watchlistAddMini}
+        />
+      </div>
 
-        {/* Recently viewed — full-width row beneath the two panels */}
-        {recent.filter((id) => allCards.some((c) => c.id === id)).length > 0 && (
-          <div className="mb-14">
-            <Rail
-              label="Recently Viewed"
-              icon={<Clock className="w-3.5 h-3.5" />}
-              ids={recent.filter((id) => allCards.some((c) => c.id === id))}
-              allCards={allCards}
-              onDragStart={handleDragStart}
-              onRemove={(id) => setRecent(removeRecentlyViewed(id))}
-            />
-          </div>
-        )}
+      {/* Desktop: My Cards + Watchlist drawers docked to the left screen edge,
+          stacked vertically. The comparison stage is offset right to clear them. */}
+      <div className="hidden lg:flex fixed left-0 top-[4.5rem] bottom-4 z-30 w-[178px] flex-col gap-3">
+        <VerticalRail
+          label="My Cards"
+          icon={<Wallet className="w-3.5 h-3.5" />}
+          ids={ownedCards}
+          allCards={allCards}
+          onDragStart={handleDragStart}
+          onRemove={(id) => setOwnedCards((prev) => prev.filter((x) => x !== id))}
+          emptyHint="Cards you own show here."
+        />
+        <VerticalRail
+          label="Watchlist"
+          icon={<Bookmark className="w-3.5 h-3.5" />}
+          ids={watchlist}
+          allCards={allCards}
+          onDragStart={handleDragStart}
+          onRemove={(id) => setWatchlist((prev) => prev.filter((x) => x !== id))}
+          addButton={watchlistAddMini}
+        />
+      </div>
 
-        {/* Shuffle control */}
-        <div className="flex justify-end mb-4">
-          <button
-            onClick={shuffleCards}
-            className="inline-flex items-center gap-2 rounded-full border border-[var(--cl-hairline-strong)] px-4 h-10 text-sm font-medium text-[var(--cl-ink)] hover:bg-[var(--cl-panel)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cl-ink)]/30"
-          >
-            <Shuffle className="w-4 h-4" />
-            <span className="hidden sm:inline">Shuffle</span>
-          </button>
-        </div>
-
-        {/* Editorial comparison: up to three cards */}
-        <motion.div
-          key={slots.length}
-          initial={reduce ? false : { opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: reduce ? 0 : 0.2, ease: [0.16, 1, 0.3, 1] }}
-          className="flex flex-col md:flex-row items-stretch gap-2 md:gap-3"
-        >
-          <div className="flex-1 min-w-0">
-            <CompareColumn
-              card={cardAt(0)}
-              onDrop={(e) => handleDrop(e, 0)}
-              onOpenSearch={() => openSearch(0)}
-              onRemove={() => removeSlot(0)}
-            />
+      <div className="w-full max-w-[100rem] mx-auto lg:pl-[190px]">
+        <div className="min-w-0">
+          {/* Shuffle control */}
+          <div className="flex justify-end mb-2">
+            <button
+              onClick={shuffleCards}
+              className="inline-flex items-center gap-2 rounded-full border border-[var(--cl-hairline-strong)] px-4 h-10 text-sm font-medium text-[var(--cl-ink)] hover:bg-[var(--cl-panel)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cl-ink)]/30"
+            >
+              <Shuffle className="w-4 h-4" />
+              <span className="hidden sm:inline">Shuffle</span>
+            </button>
           </div>
 
-          {/* Middle: the third card, or a card-shaped "add" placeholder */}
-          <div className="flex-1 min-w-0">
-            {slots.length === 3 ? (
-              <CompareColumn
-                card={cardAt(2)}
-                onDrop={(e) => handleDrop(e, 2)}
-                onOpenSearch={() => openSearch(2)}
-                onRemove={() => removeSlot(2)}
+          {!hasAny ? (
+            /* Empty stage: two hand-placed dashed slots waiting for cards. */
+            <div className="flex flex-col xl:flex-row items-center justify-center gap-10 xl:gap-8 py-14 min-h-[68vh] xl:perspective-midrange">
+              <TiltedSlot
+                tilt="-rotate-[5deg] xl:rotate-[12deg] xl:rotate-y-[22deg]"
+                onClick={() => openSearch(0)}
+                onDrop={(e) => handleDrop(e, 0)}
               />
-            ) : (
-              <AddCardSlot onClick={addSlot} onDrop={handleDropNew} />
-            )}
-          </div>
-
-          <div className="flex-1 min-w-0">
-            <CompareColumn
-              card={cardAt(1)}
-              onDrop={(e) => handleDrop(e, 1)}
-              onOpenSearch={() => openSearch(1)}
-              onRemove={() => removeSlot(1)}
-            />
-          </div>
-        </motion.div>
-
-        {!hasAny && (
-          <p className="mt-8 text-center text-sm text-[var(--cl-muted)]">
-            Pick a card for each side, add a third with +, or hit Shuffle for a random matchup.
-          </p>
-        )}
+              <TiltedSlot
+                tilt="rotate-[4deg] xl:-rotate-[11deg] xl:-rotate-y-[20deg]"
+                onClick={() => openSearch(1)}
+                onDrop={(e) => handleDrop(e, 1)}
+              />
+            </div>
+          ) : (
+            /* Editorial comparison: two cards side by side */
+            <motion.div
+              initial={reduce ? false : { opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: reduce ? 0 : 0.2, ease: [0.16, 1, 0.3, 1] }}
+              className="flex flex-col md:grid md:grid-cols-2 gap-3 md:gap-x-12 lg:gap-x-20 md:items-stretch md:[grid-template-rows:repeat(9,auto)]"
+            >
+              <CompareColumn
+                card={cardAt(0)}
+                onDrop={(e) => handleDrop(e, 0)}
+                onOpenSearch={() => openSearch(0)}
+                onRemove={() => removeSlot(0)}
+              />
+              <CompareColumn
+                card={cardAt(1)}
+                onDrop={(e) => handleDrop(e, 1)}
+                onOpenSearch={() => openSearch(1)}
+                onRemove={() => removeSlot(1)}
+              />
+            </motion.div>
+          )}
+        </div>
       </div>
 
       {/* Search Modal */}
@@ -249,7 +230,7 @@ export default function Compare({ watchlist, setWatchlist, ownedCards, setOwnedC
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-start justify-center px-4 pt-[42vh] pb-4 bg-[var(--cl-ink)]/25 backdrop-blur-sm"
+            className="fixed inset-0 z-50 flex items-start justify-center px-4 pt-[30vh] pb-4 bg-[var(--cl-ink)]/25 backdrop-blur-sm"
             onClick={() => setIsSearchOpen(false)}
           >
             <motion.div
@@ -303,6 +284,26 @@ export default function Compare({ watchlist, setWatchlist, ownedCards, setOwnedC
   );
 }
 
+// --- Empty stage ----------------------------------------------------------
+
+// A hand-placed dashed card slot: tilted at rest, it straightens under the
+// pointer as a drop/click affordance.
+function TiltedSlot({ tilt, onClick, onDrop }: { tilt: string; onClick: () => void; onDrop: (e: React.DragEvent) => void }) {
+  return (
+    <button
+      onClick={onClick}
+      onDragOver={(e) => e.preventDefault()}
+      onDrop={onDrop}
+      aria-label="Select a card to compare"
+      className={`${tilt} hover:rotate-0 hover:rotate-y-0 w-[320px] h-[202px] md:w-[400px] md:h-[252px] xl:w-[520px] xl:h-[328px] rounded-[1.25rem] border-2 border-dashed border-[var(--cl-hairline-strong)] flex flex-col items-center justify-center gap-2.5 xl:gap-4 text-[var(--cl-muted)] hover:text-[var(--cl-ink)] hover:border-[var(--cl-ink)]/50 transition-all duration-300 ease-out motion-reduce:transition-none shrink-0`}
+    >
+      <Plus className="w-7 h-7 xl:w-10 xl:h-10" strokeWidth={1.25} />
+      <span className="font-medium text-[var(--cl-ink)] xl:text-lg">Select a card</span>
+      <span className="text-sm">or drag one from the side</span>
+    </button>
+  );
+}
+
 // --- Comparison column ---------------------------------------------------
 
 function CompareColumn({
@@ -318,17 +319,17 @@ function CompareColumn({
 }) {
   if (!card) {
     return (
-      <div className="w-full flex justify-center py-4">
+      <div className="md:row-span-full flex justify-center py-4 md:py-0">
         <button
           onClick={onOpenSearch}
           onDragOver={(e) => e.preventDefault()}
           onDrop={onDrop}
           aria-label="Select a card to compare"
-          className="w-[240px] h-[360px] md:w-[280px] md:h-[420px] rounded-[1.5rem] md:rounded-[2rem] border-2 border-dashed border-[var(--cl-hairline-strong)] flex flex-col items-center justify-center gap-3 text-[var(--cl-muted)] hover:text-[var(--cl-ink)] hover:border-[var(--cl-ink)]/50 transition-colors"
+          className="w-[320px] h-[202px] md:w-full md:h-full rounded-[1.25rem] border-2 border-dashed border-[var(--cl-hairline-strong)] flex flex-col items-center justify-center gap-2.5 text-[var(--cl-muted)] hover:text-[var(--cl-ink)] hover:border-[var(--cl-ink)]/50 transition-colors"
         >
-          <Plus className="w-8 h-8" strokeWidth={1.25} />
+          <Plus className="w-7 h-7" strokeWidth={1.25} />
           <span className="font-medium text-[var(--cl-ink)]">Select a card</span>
-          <span className="text-sm">or drag one from above</span>
+          <span className="text-sm">or drag one from the side</span>
         </button>
       </div>
     );
@@ -342,12 +343,12 @@ function CompareColumn({
     <div
       onDragOver={(e) => e.preventDefault()}
       onDrop={onDrop}
-      className="relative rounded-[2rem] px-6 py-8 md:px-10 md:py-11 bg-[var(--cl-panel)] shadow-[0_20px_50px_-30px_rgba(0,0,0,0.35)]"
+      className="md:row-span-full flex flex-col md:grid md:grid-rows-subgrid relative rounded-[2rem] px-6 py-8 md:px-10 md:py-11 bg-[var(--cl-panel)] shadow-[0_20px_50px_-30px_rgba(0,0,0,0.35)]"
     >
       {/* Masthead: identity + controls + product shot */}
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--cl-muted)]">{card.issuer}</p>
+          <p className="font-display text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--cl-muted)]">{card.issuer}</p>
           <h2 className="mt-2 font-display font-semibold text-[1.75rem] md:text-[2.1rem] text-[var(--cl-ink)] leading-[1.1] text-balance">
             {card.name}
           </h2>
@@ -370,37 +371,39 @@ function CompareColumn({
               <X className="w-4 h-4" />
             </button>
           </div>
-          <div className="relative w-[92px] h-[138px] hidden sm:block">
-            <div className="absolute top-0 left-0 origin-top-left scale-[0.33] pointer-events-none">
+          <div className="relative w-[126px] h-[80px] hidden md:block">
+            <div className="absolute top-0 left-0 origin-top-left scale-[0.3] pointer-events-none">
               <CardVisual card={card} />
             </div>
           </div>
         </div>
       </div>
 
-      {/* Hero stats */}
-      <div className="mt-8 border-y border-[var(--cl-hairline)] divide-y divide-[var(--cl-hairline)]">
+      {/* Hero stats: fee + APR share one row */}
+      <div className="mt-8 grid grid-cols-2 divide-x divide-[var(--cl-hairline)] border-y border-[var(--cl-hairline)]">
         <StatBig value={fee.value} unit={fee.unit} label="Annual Fee" />
         <StatBig value={apr.value} unit={apr.unit} label="APR" />
       </div>
 
-      {/* At-a-glance parity */}
-      <ul className="mt-7 space-y-3.5">
+      {/* At-a-glance parity, two columns */}
+      <ul className="mt-7 grid grid-cols-2 gap-x-4 gap-y-3.5">
         {rows.map((r) => (
-          <li key={r.label} className="flex items-center gap-3">
+          <li key={r.label} className="flex items-center gap-2.5">
             <ParityIcon state={r.state} />
-            <span className={`text-[15px] ${r.state === false ? 'text-[var(--cl-muted)]' : 'text-[var(--cl-ink)]'}`}>
+            <span className={`text-[14px] ${r.state === false ? 'text-[var(--cl-muted)]' : 'text-[var(--cl-ink)]'}`}>
               {r.label}
             </span>
           </li>
         ))}
       </ul>
 
-      {/* Detail spec list */}
-      <dl className="mt-8 border-t border-[var(--cl-hairline)]">
+      {/* Detail spec list. `contents` keeps each row as its own subgrid
+          track (aligned with the other card) while still grouping them
+          under one <dl> for markup semantics. APR is dropped here since
+          the hero stat above already covers it. */}
+      <dl className="contents">
         <SpecRow label="Rewards" value={card.facts.rewards} bullets={cardRewardBullets(card.facts)} />
         <SpecRow label="Sign-up bonus" value={leadWithNumber(card.facts.bonus)} />
-        <SpecRow label="APR" value={card.facts.apr} sections={aprSections(card.facts)} />
         <SpecRow label="Foreign fee" value={card.facts.foreignFee} />
         <SpecRow label="Best for" value={card.facts.bestFor} />
         <SpecRow label="Credit needed" value={card.facts.creditNeeded} />
@@ -425,34 +428,14 @@ function CompareColumn({
   );
 }
 
-// Card-shaped placeholder that adds a third comparison card — click to search,
-// or drag a card from a rail straight onto it.
-function AddCardSlot({ onClick, onDrop }: { onClick: () => void; onDrop: (e: React.DragEvent) => void }) {
-  return (
-    <div className="w-full flex justify-center py-4">
-      <button
-        onClick={onClick}
-        onDragOver={(e) => e.preventDefault()}
-        onDrop={onDrop}
-        aria-label="Add a third card to compare"
-        className="w-[240px] h-[360px] md:w-[280px] md:h-[420px] rounded-[1.5rem] md:rounded-[2rem] border-2 border-dashed border-[var(--cl-hairline-strong)] flex flex-col items-center justify-center gap-3 text-[var(--cl-muted)] hover:text-[var(--cl-ink)] hover:border-[var(--cl-ink)]/50 transition-colors"
-      >
-        <Plus className="w-8 h-8" strokeWidth={1.25} />
-        <span className="font-medium text-[var(--cl-ink)]">Add a card</span>
-        <span className="text-sm">compare up to three</span>
-      </button>
-    </div>
-  );
-}
-
 function StatBig({ value, unit, label }: { value: string; unit: string | null; label: string }) {
   return (
-    <div className="flex items-center justify-between gap-4 py-6">
-      <span className="font-mono text-5xl md:text-[3.5rem] leading-none tracking-tight text-[var(--cl-ink)] tabular-nums">
+    <div className="flex flex-col gap-1 py-6 px-4 first:pl-0 last:pr-0">
+      <span className="font-mono text-4xl md:text-[2.75rem] leading-none tracking-tight text-[var(--cl-ink)] tabular-nums">
         {value}
         {unit && <sup className="text-[0.4em] font-medium ml-1 top-[-0.8em]">{unit}</sup>}
       </span>
-      <span className="text-sm text-[var(--cl-muted)] whitespace-nowrap">{label}</span>
+      <span className="text-xs uppercase tracking-wide text-[var(--cl-muted)]">{label}</span>
     </div>
   );
 }
@@ -467,29 +450,17 @@ function SpecRow({
   label,
   value,
   bullets,
-  sections,
 }: {
   label: string;
   value: string;
   bullets?: string[];
-  sections?: { label: string; value: string }[];
 }) {
   const showBullets = bullets && bullets.length >= 1;
-  const showSections = sections && sections.length >= 1;
   return (
-    <div className="flex justify-between gap-6 py-3.5 border-b border-[var(--cl-hairline)] last:border-b-0">
+    <div className="flex justify-between gap-6 py-3.5 border-[var(--cl-hairline)] border-b last:border-b-0 first:mt-8 first:border-t">
       <dt className="shrink-0 pt-0.5 text-[13px] text-[var(--cl-muted)]">{label}</dt>
       <dd className="max-w-[64%] text-right text-[14px] leading-relaxed text-[var(--cl-ink)] [overflow-wrap:anywhere]">
-        {showSections ? (
-          <dl className="flex flex-col gap-1.5">
-            {sections!.map((s) => (
-              <div key={s.label} className="flex gap-2 justify-center leading-snug">
-                <dt className="font-semibold uppercase tracking-wide text-[var(--cl-muted)] shrink-0">{s.label}:</dt>
-                <dd>{s.value}</dd>
-              </div>
-            ))}
-          </dl>
-        ) : showBullets ? (
+        {showBullets ? (
           <ul className="flex flex-col gap-1.5 text-left">
             {bullets!.map((b, i) => (
               <li key={i} className="flex gap-2">
@@ -506,7 +477,118 @@ function SpecRow({
   );
 }
 
-// --- Card rail -----------------------------------------------------------
+// --- Mini card thumb ------------------------------------------------------
+// Landscape thumbnail of the real card art, draggable into a slot.
+
+function MiniCard({
+  card,
+  onDragStart,
+  onRemove,
+}: {
+  card: CreditCard;
+  onDragStart: (e: React.DragEvent, id: string) => void;
+  onRemove: (id: string) => void;
+}) {
+  return (
+    <div
+      draggable
+      onDragStart={(e) => onDragStart(e, card.id)}
+      className="shrink-0 relative w-[115px] h-[73px] md:w-[134px] md:h-[85px] cursor-grab active:cursor-grabbing group"
+    >
+      {/* Clip the card art (and its heavy drop-shadow) to a neat, card-shaped
+          rectangle so it sits flat in the rail. */}
+      <div className="absolute inset-0 overflow-hidden rounded-[0.6rem]">
+        <div className="absolute top-0 left-0 pointer-events-none origin-top-left scale-[0.32]">
+          <CardVisual card={card} />
+        </div>
+      </div>
+      <button
+        onClick={() => onRemove(card.id)}
+        aria-label={`Remove ${card.name}`}
+        className="absolute top-1 right-1 bg-[var(--cl-bg)] text-[var(--cl-muted)] hover:text-[var(--cl-ink)] p-1 rounded-full border border-[var(--cl-hairline-strong)] shadow-sm opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity z-30"
+      >
+        <X className="w-3 h-3" />
+      </button>
+    </div>
+  );
+}
+
+// --- Vertical wallet drawer (desktop) --------------------------------------
+// Docked flush to the left screen edge (flat left, rounded right). Fills its
+// share of the stacked sidebar when open; collapses to a slim tab that yields
+// its height to its sibling.
+
+function VerticalRail({
+  label,
+  icon,
+  ids,
+  allCards,
+  onDragStart,
+  onRemove,
+  addButton,
+  emptyHint,
+}: {
+  label: string;
+  icon: React.ReactNode;
+  ids: string[];
+  allCards: CreditCard[];
+  onDragStart: (e: React.DragEvent, id: string) => void;
+  onRemove: (id: string) => void;
+  addButton?: React.ReactNode;
+  emptyHint?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const known = ids.filter((id) => allCards.some((c) => c.id === id));
+
+  if (!open) {
+    return (
+      <button
+        onClick={() => setOpen(true)}
+        aria-expanded={false}
+        aria-label={`Expand ${label}`}
+        className="shrink-0 flex flex-row items-center justify-between gap-2 rounded-r-2xl border border-l-0 border-[var(--cl-hairline)] bg-[var(--cl-panel)]/40 pl-4 pr-2.5 py-3 text-[var(--cl-muted)] hover:text-[var(--cl-ink)] hover:bg-[var(--cl-panel)] transition-colors"
+      >
+        <span className="text-[11px] font-semibold uppercase tracking-wider flex items-center gap-1.5">
+          <span className="text-[var(--cl-gold)]">{icon}</span> {label} ({known.length})
+        </span>
+        <ChevronDown className="w-4 h-4" />
+      </button>
+    );
+  }
+
+  return (
+    <div className="flex-1 min-h-0 flex flex-col rounded-r-2xl border border-l-0 border-[var(--cl-hairline)] bg-[var(--cl-panel)]/40 pl-4 pr-3 py-3">
+      <div className="flex items-center justify-between gap-1 shrink-0">
+        <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--cl-muted)] flex items-center gap-1.5 min-w-0">
+          <span className="text-[var(--cl-gold)] shrink-0">{icon}</span>
+          <span className="truncate">{label}</span>
+          <span className="text-[var(--cl-muted)]/70 normal-case tracking-normal shrink-0">({known.length})</span>
+        </span>
+        <button
+          onClick={() => setOpen(false)}
+          aria-expanded
+          aria-label={`Collapse ${label}`}
+          className="p-1 rounded-full text-[var(--cl-muted)] hover:text-[var(--cl-ink)] hover:bg-[var(--cl-hairline)]/60 transition-colors"
+        >
+          <ChevronLeft className="w-4 h-4" />
+        </button>
+      </div>
+
+      <div className="mt-3 flex-1 min-h-0 flex flex-col items-center gap-3 overflow-y-auto hide-scrollbar">
+        {known.map((id) => {
+          const card = allCards.find((c) => c.id === id)!;
+          return <MiniCard key={id} card={card} onDragStart={onDragStart} onRemove={onRemove} />;
+        })}
+        {addButton}
+        {known.length === 0 && !addButton && (
+          <p className="text-xs text-[var(--cl-muted)] py-8 px-1 text-center">{emptyHint || 'Nothing here yet.'}</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// --- Horizontal card rail (mobile wallets + recently-viewed tray) -----------
 
 function Rail({
   label,
@@ -527,7 +609,7 @@ function Rail({
   addButton?: React.ReactNode;
   emptyHint?: string;
 }) {
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
   const known = ids.filter((id) => allCards.some((c) => c.id === id));
   return (
     <div className="rounded-2xl border border-[var(--cl-hairline)] bg-[var(--cl-panel)]/40 px-4 py-3 min-w-0">
@@ -552,36 +634,14 @@ function Rail({
             transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
             className="overflow-hidden"
           >
-            <div className="flex gap-4 overflow-x-auto pt-3 pb-1 hide-scrollbar max-w-full">
+            <div className="flex gap-3.5 overflow-x-auto pt-3 pb-1 hide-scrollbar max-w-full">
               {known.map((id) => {
                 const card = allCards.find((c) => c.id === id)!;
-                return (
-                  <div
-                    key={id}
-                    draggable
-                    onDragStart={(e) => onDragStart(e, id)}
-                    className="shrink-0 relative w-[96px] h-[144px] md:w-[112px] md:h-[168px] cursor-grab active:cursor-grabbing group"
-                  >
-                    {/* Clip the card art (and its heavy drop-shadow) to a neat,
-                        card-shaped rectangle so it sits flat in the rail. */}
-                    <div className="absolute inset-0 overflow-hidden rounded-[0.7rem]">
-                      <div className="absolute top-0 left-0 pointer-events-none origin-top-left scale-[0.4]">
-                        <CardVisual card={card} />
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => onRemove(id)}
-                      aria-label={`Remove ${card.name}`}
-                      className="absolute top-1.5 right-1.5 bg-[var(--cl-bg)] text-[var(--cl-muted)] hover:text-[var(--cl-ink)] p-1 rounded-full border border-[var(--cl-hairline-strong)] shadow-sm opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity z-30"
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                  </div>
-                );
+                return <MiniCard key={id} card={card} onDragStart={onDragStart} onRemove={onRemove} />;
               })}
               {addButton}
               {known.length === 0 && !addButton && (
-                <p className="text-sm text-[var(--cl-muted)] py-10 px-1">{emptyHint || 'Nothing here yet.'}</p>
+                <p className="text-sm text-[var(--cl-muted)] py-6 px-1">{emptyHint || 'Nothing here yet.'}</p>
               )}
             </div>
           </motion.div>

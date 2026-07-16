@@ -36,12 +36,12 @@ export default function BubbleFilters({ activeFilters, onFiltersChange }: Bubble
   };
 
   let i = 0;
-  const spend = FILTERS.filter((f) => f.group === 'spend');
 
   return (
     <div className="w-full flex flex-col items-center gap-2.5 z-20 relative">
-      {/* Upper: primary filters */}
-      <div className="max-w-3xl px-4 md:px-6 flex flex-wrap justify-center items-center gap-x-2 gap-y-2">
+      {/* Primary filters: account · reward · quality. On desktop they sit on a
+          single line (no wrap, no width cap); smaller screens wrap as needed. */}
+      <div className="max-w-3xl lg:max-w-none px-4 md:px-6 flex flex-wrap lg:flex-nowrap justify-center items-center gap-x-2 gap-y-2">
         {UPPER_GROUPS.map((group, gi) => (
           <div key={group} className="contents">
             {gi > 0 && (
@@ -51,13 +51,6 @@ export default function BubbleFilters({ activeFilters, onFiltersChange }: Bubble
           </div>
         ))}
       </div>
-
-      {/* Lower: spend-category refinements, smaller */}
-      {spend.length > 0 && (
-        <div className="max-w-2xl px-4 flex flex-wrap justify-center items-center gap-1.5">
-          {spend.map((filter) => bubble(filter, i++, true))}
-        </div>
-      )}
     </div>
   );
 }

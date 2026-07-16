@@ -29,26 +29,28 @@ export default function CardFacts({ card }: CardFactsProps) {
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, transition: { duration: 0.15 } }}
         transition={{ duration: reducedMotion ? 0 : 0.35, ease: [0.16, 1, 0.3, 1] }}
-        className="w-full max-w-6xl mx-auto px-4"
+        className="w-full max-w-[88rem] mx-auto px-4"
       >
-        <div className="grid grid-cols-1 md:grid-cols-3">
+        {/* Sized for the 13" MacBook (1440 logical): Rewards holds ~655px while
+            the Annual Fee / Sign-up Bonus sides take the widened remainder. */}
+        <div className="grid grid-cols-1 md:grid-cols-[1.1fr_2fr_1.1fr]">
           {cells.map((cell, i) => (
             <div
               key={cell.label}
-              className={`flex flex-col items-center text-center gap-2 p-5 md:p-6 ${i < 2 ? 'border-b md:border-b-0 md:border-r' : ''} border-[var(--cl-hairline)]`}
+              className={`flex flex-col items-center text-center gap-2.5 p-5 md:px-8 md:py-6 ${i < 2 ? 'border-b md:border-b-0 md:border-r' : ''} border-[var(--cl-hairline)]`}
             >
-              <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--cl-muted)]">{cell.label}</span>
+              <span className="font-display text-[11px] font-semibold uppercase tracking-[0.11em] text-[var(--cl-muted)]">{cell.label}</span>
               {cell.rewards && rewardsBullets.length >= 1 ? (
-                <ul className="flex flex-col gap-1.5 text-left">
+                <ul className="flex flex-col gap-2 text-left">
                   {rewardsBullets.map((b, j) => (
-                    <li key={j} className="flex gap-2 text-sm md:text-base font-medium text-[var(--cl-ink)] leading-relaxed">
-                      <span aria-hidden className="mt-[0.5em] h-1 w-1 rounded-full bg-[var(--cl-gold)] shrink-0" />
+                    <li key={j} className="flex gap-2.5 text-[15px] font-medium text-[var(--cl-ink)] leading-relaxed">
+                      <span aria-hidden className="mt-[0.55em] h-1.5 w-1.5 rounded-full bg-[var(--cl-gold)] shrink-0" />
                       <span>{b}</span>
                     </li>
                   ))}
                 </ul>
               ) : (
-                <p className="text-sm md:text-base font-medium text-[var(--cl-ink)] leading-relaxed max-w-[46ch] [overflow-wrap:anywhere]">{cell.value}</p>
+                <p className="text-[15px] font-medium text-[var(--cl-ink)] leading-relaxed max-w-[46ch] [overflow-wrap:anywhere]">{cell.value}</p>
               )}
             </div>
           ))}

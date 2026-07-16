@@ -21,12 +21,11 @@ export default function CardVisual({ card }: CardVisualProps) {
   const [artFailed, setArtFailed] = useState(false);
   const showArt = isLikelyCardArt(card.imageUrl) && !artFailed;
 
-  // Real card art, rotated to stand vertically in the same portrait slot
-  // the stylized face occupies. Issuer art is landscape; rotating 90°
-  // fills the slot without distortion (art keeps its own aspect ratio).
+  // Real card art shown in its natural landscape orientation (flat card face,
+  // ~1.586:1). Issuer art is already landscape, so no rotation is needed.
   if (showArt) {
     return (
-      <div className="relative w-[240px] h-[360px] md:w-[280px] md:h-[420px] flex items-center justify-center">
+      <div className="relative w-[360px] h-[228px] md:w-[420px] md:h-[266px] flex items-center justify-center">
         <img
           src={card.imageUrl}
           alt={`${card.name} card art`}
@@ -36,15 +35,15 @@ export default function CardVisual({ card }: CardVisualProps) {
             // Flat card art is landscape at ~card proportions (1.586:1, so
             // roughly 1.3–1.75). Portrait/square images and wider ones —
             // 1200x630 og:image social banners (1.90), mastheads, offers,
-            // store logos, multi-card arrays — garble when rotated into the
-            // portrait slot, so drop those to the gradient face instead.
+            // store logos, multi-card arrays — aren't flat card faces, so
+            // drop those to the gradient face instead.
             const { naturalWidth: w, naturalHeight: h } = e.currentTarget;
             // Reject portrait/square, non-card ratios, AND anything too low-res
             // to render sharp at the ~420px slot — those fall back to the clean
             // gradient face rather than showing a blurry/undersized image.
             if (w && h && (w <= h || w / h < 1.3 || w / h > 1.8 || w < 200)) setArtFailed(true);
           }}
-          className="rotate-90 w-[360px] h-[240px] md:w-[420px] md:h-[280px] max-w-none object-contain drop-shadow-[0_16px_40px_rgba(0,0,0,0.55)]"
+          className="w-full h-full object-contain drop-shadow-[0_16px_40px_rgba(0,0,0,0.55)]"
         />
       </div>
     );
@@ -53,7 +52,7 @@ export default function CardVisual({ card }: CardVisualProps) {
   // Fallback: the stylized gradient face, for cards the crawler hasn't
   // found art for (and all mock data).
   return (
-    <div className={`relative w-[240px] h-[360px] md:w-[280px] md:h-[420px] rounded-[1.5rem] md:rounded-[2rem] overflow-hidden shadow-2xl p-6 md:p-8 flex flex-col justify-between ${card.gradient}`}>
+    <div className={`relative w-[360px] h-[228px] md:w-[420px] md:h-[266px] rounded-[1.25rem] md:rounded-[1.5rem] overflow-hidden shadow-2xl p-5 md:p-6 flex flex-col justify-between ${card.gradient}`}>
       {/* Texture / Noise overlay */}
       <div
         className="absolute inset-0 opacity-20 mix-blend-overlay"
@@ -71,7 +70,7 @@ export default function CardVisual({ card }: CardVisualProps) {
       </div>
 
       {/* Middle row: Chip */}
-      <div className="relative z-10 mt-12 md:mt-16">
+      <div className="relative z-10">
         <div className="w-10 h-12 md:w-12 md:h-14 bg-gradient-to-br from-primary/50 to-primary-deep/30 rounded-md border border-primary/40 backdrop-blur-sm shadow-inner flex flex-col justify-around p-1">
           <div className="w-full h-[1px] bg-primary/40"></div>
           <div className="w-full h-[1px] bg-primary/40"></div>

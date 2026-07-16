@@ -1,16 +1,16 @@
-@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500..700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter+Tight:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 @import "tailwindcss";
 
 /*
-  Midnight Gold — see DESIGN.md for the full system. Fraunces (an elegant
-  optical-size serif) carries display moments: card names, page headings,
-  the wordmark. Inter carries everything functional: body, labels,
-  buttons, data. Serif display over grotesk body is the premium-fintech
-  pairing; the two contrast on a real axis instead of competing.
+  A single clean grotesque system. Inter Tight (tighter, display-optimized)
+  carries headings: card names, page headings, the wordmark. Inter carries
+  everything functional: body, labels, buttons, data. Same neutral-grotesque
+  DNA, distinguished by size, weight, and tracking rather than by a competing
+  typeface — the modern fintech look.
 */
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
-  --font-display: "Fraunces", "Georgia", serif;
+  --font-display: "Inter Tight", "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
 
   --color-bg: oklch(0.09 0 0);
@@ -36,9 +36,6 @@ html, body {
 }
 body {
   @apply text-ink antialiased overflow-x-hidden selection:bg-primary/30;
-  /* Render the whole app at 80% (like browser zoom) — scales uniformly and
-     keeps fixed positioning correct, unlike transform: scale. */
-  zoom: 0.8;
 }
 
 /* Nav bar and the search/command-palette-style modals: the only two

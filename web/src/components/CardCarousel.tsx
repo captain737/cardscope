@@ -154,7 +154,7 @@ export default function CardCarousel({
   // Landing hero: nothing but the search + filters, centered on the page.
   if (!showResults) {
     return (
-      <section className="compare-light relative w-full min-h-screen flex flex-col items-center justify-center px-4 bg-[var(--cl-bg)]">
+      <section className="compare-light relative w-full min-h-screen flex flex-col items-center justify-center px-6 sm:px-12 lg:px-24 bg-[var(--cl-bg)]">
         <div className="w-full max-w-4xl flex flex-col items-center gap-7 -mt-16">
           <div className="text-center">
             <h1 className="font-display font-semibold text-4xl md:text-5xl text-[var(--cl-ink)] text-balance">Find what fits you best</h1>
@@ -174,7 +174,7 @@ export default function CardCarousel({
   }
 
   return (
-    <section className="compare-light relative w-full min-h-screen lg:h-screen lg:overflow-hidden pt-20 pb-3 flex flex-col items-center bg-[var(--cl-bg)]">
+    <section className="compare-light relative w-full min-h-screen lg:h-screen lg:overflow-hidden pt-24 pb-12 flex flex-col items-center bg-[var(--cl-bg)]">
       {matchMode && (
         <div className="relative z-20 w-full flex flex-col items-center gap-3 px-4 text-center mb-2">
           <h2 className="font-display font-semibold text-3xl md:text-4xl text-[var(--cl-ink)]">Your best matches</h2>
@@ -189,29 +189,14 @@ export default function CardCarousel({
 
       {activeCard ? (
       <>
-      {/* Upper (top 50% of the page): carousel (left) + analysis (right).
-          The section's pt-20 (5rem) is subtracted so the block ends exactly at
-          the 50vh line and the card name below always starts at the same
-          point. */}
-      <div className="relative z-10 w-full px-6 md:px-12 grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-12 lg:h-[calc(50vh-5rem)] shrink-0">
-        {/* Navigation arrows at the section edges, aligned to the card row */}
-        <button
-          onClick={prevCard}
-          aria-label="Previous card"
-          className="hidden lg:flex absolute left-0 top-1/2 -translate-y-1/2 z-30 p-3 rounded-full bg-[var(--cl-bg)] border border-[var(--cl-hairline-strong)] shadow-sm hover:bg-[var(--cl-panel)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cl-ink)]/30 transition-colors text-[var(--cl-muted)] hover:text-[var(--cl-ink)]"
-        >
-          <ChevronLeft className="w-6 h-6" />
-        </button>
-        <button
-          onClick={nextCard}
-          aria-label="Next card"
-          className="hidden lg:flex absolute right-0 top-1/2 -translate-y-1/2 z-30 p-3 rounded-full bg-[var(--cl-bg)] border border-[var(--cl-hairline-strong)] shadow-sm hover:bg-[var(--cl-panel)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cl-ink)]/30 transition-colors text-[var(--cl-muted)] hover:text-[var(--cl-ink)]"
-        >
-          <ChevronRight className="w-6 h-6" />
-        </button>
-
-        {/* Left: card carousel */}
-        <div className="relative h-[300px] lg:h-full flex items-center justify-center perspective-[1200px] overflow-hidden">
+      {/* Upper (top ~48% of the page): carousel (left) + analysis (right).
+          The section's pt-24 (6rem) is subtracted so the block ends at the
+          48vh line and the card name below starts from that earlier point. */}
+      <div className="relative z-10 w-full px-6 md:px-12 grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-24 lg:h-[calc(48vh-6rem)] shrink-0">
+        {/* Left: carousel (edges fade into the page bg) with the provider
+            toggle sitting directly below the main card. */}
+        <div className="flex flex-col h-[300px] lg:h-full min-h-0">
+          <div className="relative flex-1 min-h-0 flex items-center justify-center perspective-[1200px] overflow-hidden [mask-image:linear-gradient(to_right,transparent,#000_14%,#000_86%,transparent)]">
           <div className="relative w-full h-full flex justify-center items-center transform-style-3d">
           <AnimatePresence initial={false}>
             {cards.map((card, index) => {
@@ -254,14 +239,64 @@ export default function CardCarousel({
             })}
           </AnimatePresence>
           </div>
+          </div>
+          {/* Carousel controls, right below the main card: prev · watchlist ·
+              visit · next. Labels reveal on hover. */}
+          <div className="shrink-0 -mt-2 flex items-center justify-center gap-3.5">
+            <button
+              onClick={prevCard}
+              aria-label="Previous card"
+              className="p-3 rounded-full bg-[var(--cl-bg)] border border-[var(--cl-hairline-strong)] shadow-sm hover:bg-[var(--cl-panel)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cl-ink)]/30 transition-colors text-[var(--cl-muted)] hover:text-[var(--cl-ink)]"
+            >
+              <ChevronLeft className="w-7 h-7" />
+            </button>
+            <div className="group relative flex items-center justify-center">
+              <button
+                onClick={() => setWatchlist((prev) => (prev.includes(activeCard.id) ? prev.filter((id) => id !== activeCard.id) : [...prev, activeCard.id]))}
+                aria-label={watchlist.includes(activeCard.id) ? `Remove ${activeCard.name} from watchlist` : `Add ${activeCard.name} to watchlist`}
+                className="p-3 rounded-full bg-[var(--cl-bg)] border border-[var(--cl-hairline-strong)] shadow-sm text-[var(--cl-muted)] hover:text-[var(--cl-ink)] hover:border-[var(--cl-ink)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cl-ink)]/30 transition-colors flex items-center justify-center"
+              >
+                {watchlist.includes(activeCard.id) ? <X className="w-6 h-6" /> : <Plus className="w-6 h-6" />}
+              </button>
+              <span className="pointer-events-none absolute top-full left-1/2 -translate-x-1/2 mt-2 whitespace-nowrap text-[9px] font-semibold uppercase tracking-wider text-[var(--cl-muted)] opacity-0 group-hover:opacity-100 transition-opacity duration-150">{watchlist.includes(activeCard.id) ? 'Saved' : 'Watchlist'}</span>
+            </div>
+            <div className="group relative flex items-center justify-center">
+              {activeCard.applyUrl ? (
+                <a
+                  href={activeCard.applyUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={`Visit ${activeCard.name} on the issuer's site`}
+                  className="p-3 rounded-full bg-[var(--cl-pill)] text-[var(--cl-pill-ink)] shadow-sm hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cl-ink)]/40 transition-opacity flex items-center justify-center"
+                >
+                  <ArrowUpRight className="w-6 h-6" />
+                </a>
+              ) : (
+                <span aria-hidden="true" title="Application link unavailable" className="p-3 rounded-full bg-[var(--cl-pill)]/30 text-[var(--cl-pill-ink)]/50 flex items-center justify-center cursor-not-allowed">
+                  <ArrowUpRight className="w-6 h-6" />
+                </span>
+              )}
+              <span className="pointer-events-none absolute top-full left-1/2 -translate-x-1/2 mt-2 whitespace-nowrap text-[9px] font-semibold uppercase tracking-wider text-[var(--cl-gold)] opacity-0 group-hover:opacity-100 transition-opacity duration-150">Visit</span>
+            </div>
+            <button
+              onClick={nextCard}
+              aria-label="Next card"
+              className="p-3 rounded-full bg-[var(--cl-bg)] border border-[var(--cl-hairline-strong)] shadow-sm hover:bg-[var(--cl-panel)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cl-ink)]/30 transition-colors text-[var(--cl-muted)] hover:text-[var(--cl-ink)]"
+            >
+              <ChevronRight className="w-7 h-7" />
+            </button>
+          </div>
         </div>
 
         {/* Right: compact analysis */}
         <CardInsightsPanel card={activeCard} />
       </div>
 
-      {/* Lower: card identity with inline actions + headline facts */}
-      <div aria-live="polite" className="relative z-20 w-full lg:flex-1 lg:min-h-0 flex flex-col items-center justify-center lg:justify-start gap-4 px-4 mt-6 lg:mt-0">
+      {/* Lower: card identity with inline actions + headline facts. Fixed
+          height on desktop (content top-aligned) so the search bar below always
+          starts at the same vertical position regardless of how tall the active
+          card's reward list is; the page's remaining slack falls below the bar. */}
+      <div aria-live="polite" className="relative z-20 w-full flex flex-col items-center gap-4 px-4 mt-6 lg:mt-[7vh] lg:h-[33vh]">
         <AnimatePresence mode="wait">
           <motion.div
             key={activeCard.id}
@@ -271,46 +306,17 @@ export default function CardCarousel({
             transition={{ duration: reducedMotion ? 0 : 0.3, ease: [0.16, 1, 0.3, 1] }}
             className="w-full flex flex-col items-center"
           >
-            {/* Card name + Watchlist/Visit on one line */}
-            <div className="flex items-center justify-center gap-x-8 gap-y-3 flex-wrap">
+            {/* Card name, centered. Watchlist / Visit actions live in the
+                carousel control row beneath the card. */}
+            <div className="w-full flex justify-center px-2">
               <div className="text-center">
-                <p className="text-xs font-semibold uppercase tracking-wider text-[var(--cl-gold)] mb-1">{activeCard.issuer}</p>
+                <p className="font-display text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--cl-gold)] mb-1">{activeCard.issuer}</p>
                 <h1 className="font-display font-semibold text-2xl md:text-3xl text-[var(--cl-ink)] text-balance">{activeCard.name}</h1>
                 {ranked && (
                   <p className="mt-1 text-sm font-medium text-[var(--cl-muted)]">
                     <span className="text-[var(--cl-gold)] font-semibold">#{currentIndex + 1}</span> {rankLabel}
                   </p>
                 )}
-              </div>
-              <div className="flex items-center gap-5">
-                <div className="flex flex-col items-center gap-1">
-                  <button
-                    onClick={() => setWatchlist((prev) => (prev.includes(activeCard.id) ? prev.filter((id) => id !== activeCard.id) : [...prev, activeCard.id]))}
-                    aria-label={watchlist.includes(activeCard.id) ? `Remove ${activeCard.name} from watchlist` : `Add ${activeCard.name} to watchlist`}
-                    className="w-11 h-11 rounded-full bg-transparent border border-[var(--cl-hairline-strong)] text-[var(--cl-muted)] hover:text-[var(--cl-ink)] hover:border-[var(--cl-ink)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cl-ink)]/30 transition-colors flex items-center justify-center"
-                  >
-                    {watchlist.includes(activeCard.id) ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
-                  </button>
-                  <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--cl-muted)]">{watchlist.includes(activeCard.id) ? 'Saved' : 'Watchlist'}</span>
-                </div>
-                <div className="flex flex-col items-center gap-1">
-                  {activeCard.applyUrl ? (
-                    <a
-                      href={activeCard.applyUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      aria-label={`Visit ${activeCard.name} on the issuer's site`}
-                      className="w-11 h-11 rounded-full bg-[var(--cl-pill)] text-[var(--cl-pill-ink)] hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cl-ink)]/40 transition-opacity flex items-center justify-center"
-                    >
-                      <ArrowUpRight className="w-4 h-4" />
-                    </a>
-                  ) : (
-                    <span aria-hidden="true" title="Application link unavailable" className="w-11 h-11 rounded-full bg-[var(--cl-pill)]/30 text-[var(--cl-pill-ink)]/50 flex items-center justify-center cursor-not-allowed">
-                      <ArrowUpRight className="w-4 h-4" />
-                    </span>
-                  )}
-                  <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--cl-gold)]">Visit</span>
-                </div>
               </div>
             </div>
 
@@ -364,9 +370,11 @@ export default function CardCarousel({
         </div>
       )}
 
-      {/* Bottom refine bar: provider (inside the bar) + search + filters */}
+      {/* Bottom refine bar: provider (inside the bar) + search + filters.
+          Small top gap (less padding before the search bar); the section's
+          pb-8 plus the natural bottom slack open the space below it. */}
       {!matchMode && (
-        <div className="relative z-20 w-full shrink-0 flex flex-col items-center gap-3 pt-2">
+        <div className="relative z-20 w-full shrink-0 flex flex-col items-center gap-5 mt-2 lg:mt-3">
           <div className="w-full px-4">
             <AISearchBar
               onQueryChange={(q) => { if (q.trim()) setStarted(true); }}

@@ -11,50 +11,48 @@ import { topPerkDisplay } from '../lib/rewards';
 export default function CardInsightsPanel({ card }: { card: CreditCard }) {
   const ins = cardInsights(card);
   const apr = aprSections(card.facts);
+  // "Best for" is intentionally omitted here — it has its own bulleted section
+  // below. Foreign fee and Top perk share the last row (two columns).
   const details: { label: string; value: string }[] = [
     ...apr.map((s) => ({ label: `${s.label} APR`, value: s.value })),
-    { label: 'Credit needed', value: card.facts.creditNeeded },
     { label: 'Foreign fee', value: card.facts.foreignFee },
     { label: 'Top perk', value: topPerkDisplay(card.facts) },
-    { label: 'Best for', value: card.facts.bestFor },
   ];
 
   return (
-    <div className="w-full h-full overflow-y-auto hide-scrollbar rounded-2xl border border-[var(--cl-hairline)] bg-[var(--cl-panel)]/40 p-5 md:p-6 text-left flex flex-col gap-5">
-      <Section title="Best for">
-        <ul className="flex flex-col gap-1.5">
-          {ins.bestFor.map((it, i) => (
-            <li key={i} className="flex gap-2 text-sm text-[var(--cl-ink)] leading-relaxed">
-              <Check className="w-3.5 h-3.5 mt-[0.2em] shrink-0 text-[var(--cl-gold)]" />
+    <div className="w-full h-full overflow-y-auto hide-scrollbar text-left flex flex-col gap-7 pr-1 pt-6 lg:pt-16">
+      <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-5">
+        {details.map((d) => (
+          <div key={d.label} className="flex flex-col gap-1.5">
+            <dt className="font-display text-[10.5px] font-semibold uppercase tracking-[0.1em] text-[var(--cl-muted)]">{d.label}</dt>
+            <dd className="text-[15px] font-medium text-[var(--cl-ink)] leading-snug [overflow-wrap:anywhere]">{d.value}</dd>
+          </div>
+        ))}
+      </dl>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 border-t border-[var(--cl-hairline)] pt-7">
+        <Section title="Approval difficulty"><p className="text-[15px] text-[var(--cl-ink)] leading-relaxed">{ins.approval.label}</p></Section>
+        <Section title="Redemption options"><p className="text-[15px] text-[var(--cl-ink)] leading-relaxed">{ins.redemption.join(' · ')}</p></Section>
+      </div>
+
+      <Section title="Best for" divided>
+        <ul className="grid grid-cols-1 sm:grid-cols-3 gap-x-6 gap-y-2.5">
+          {ins.bestFor.slice(0, 3).map((it, i) => (
+            <li key={i} className="flex items-start gap-2 min-w-0 text-[15px] text-[var(--cl-ink)] leading-snug">
+              <Check className="w-4 h-4 mt-[0.15em] shrink-0 text-[var(--cl-gold)]" strokeWidth={2.5} />
               <span>{it}</span>
             </li>
           ))}
         </ul>
       </Section>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-        <Section title="Approval difficulty"><p className="text-sm text-[var(--cl-ink)]">{ins.approval.label}</p></Section>
-        <Section title="Redemption options"><p className="text-sm text-[var(--cl-ink)]">{ins.redemption.join(' · ')}</p></Section>
-      </div>
-
-      <Section title="Card details">
-        <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2.5">
-          {details.map((d) => (
-            <div key={d.label} className="flex flex-col">
-              <dt className="text-[10px] font-semibold uppercase tracking-wider text-[var(--cl-muted)]">{d.label}</dt>
-              <dd className="text-sm text-[var(--cl-ink)] leading-snug [overflow-wrap:anywhere]">{d.value}</dd>
-            </div>
-          ))}
-        </dl>
-      </Section>
     </div>
   );
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({ title, children, divided }: { title: string; children: React.ReactNode; divided?: boolean }) {
   return (
-    <div>
-      <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--cl-muted)] mb-2">{title}</p>
+    <div className={divided ? 'border-t border-[var(--cl-hairline)] pt-7' : undefined}>
+      <p className="font-display text-[11px] font-semibold uppercase tracking-[0.11em] text-[var(--cl-muted)] mb-3">{title}</p>
       {children}
     </div>
   );
