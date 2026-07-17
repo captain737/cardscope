@@ -6,6 +6,7 @@ import CardFacts from './CardFacts';
 import BubbleFilters from './BubbleFilters';
 import AISearchBar from './AISearchBar';
 import { buildDeck } from '../lib/ranking';
+import { describeFilters } from '../lib/filters';
 import { fetchAdvisorNote, advisorEnabled } from '../lib/advisor';
 import { pushRecentlyViewed } from '../lib/recentlyViewed';
 import CardInsightsPanel from './CardInsightsPanel';
@@ -21,15 +22,6 @@ const PROVIDER_LABELS: Record<string, string> = {
 };
 const providerLabel = (p: string) =>
   PROVIDER_LABELS[p] ?? p.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
-
-// Rank a reason so the two most substantive ones lead: a concrete reward
-// rate or complementarity beats the generic fee-fit / approval lines.
-function reasonRank(line: string): number {
-  if (/^Strong /.test(line) || /^Complements/.test(line)) return 3;
-  if (/^Adds meaningful|^Keeps costs|^Supports credit/.test(line)) return 2;
-  if (/^Fits your \$/.test(line)) return 1;
-  return 0; // approval language
-}
 
 interface CardCarouselProps {
   watchlist: string[];
@@ -105,14 +97,16 @@ export default function CardCarousel({
     : { type: "spring" as const, stiffness: 300, damping: 30, mass: 0.8 };
 
   const activeCard = cards[currentIndex];
-  const rankLabel = complement ? 'best choice for you' : 'best match';
+  const filterDetail = describeFilters(activeFilters);
+  const rankLabel = filterDetail
+    ? `best choice for ${filterDetail}`
+    : complement ? 'best choice for you' : 'best match';
   // Results appear once the user has expressed intent — a match, a filter, or
   // a search. Otherwise the page shows just the centered search + filters.
   const showResults = matchMode || started || activeFilters.length > 0;
   // Show the tailored reasoning only in match mode (Find Me a Card results).
+  // Rendered as "Fits you because" in the insights panel, not under the name.
   const activeWhy = matchMode && activeCard ? explanations[activeCard.id] : undefined;
-  // The two strongest reasons, shown as centered bullets under the rank badge.
-  const topReasons = (activeWhy ?? []).slice().sort((a, b) => reasonRank(b) - reasonRank(a)).slice(0, 2);
 
   // AI advisor note (Phase 2) for the active best-match card. Only runs when
   // the endpoint is configured; degrades to nothing otherwise.
@@ -176,11 +170,11 @@ export default function CardCarousel({
   return (
     <section className="compare-light relative w-full min-h-screen pt-[clamp(4.25rem,7vh,6.5rem)] pb-[clamp(1.25rem,3vh,2.5rem)] flex flex-col items-center bg-[var(--cl-bg)]">
       {matchMode && (
-        <div className="relative z-20 w-full flex flex-col items-center gap-3 px-4 text-center mb-2">
+        <div className="relative z-20 w-full flex flex-wrap items-center justify-center gap-x-3 gap-y-1 px-4 text-center mb-2">
           <h2 className="font-display font-semibold text-3xl md:text-4xl text-[var(--cl-ink)]">Your best matches</h2>
           <button
             onClick={() => { setStarted(true); onBrowseAll(); }}
-            className="h-9 px-4 rounded-full bg-transparent border border-[var(--cl-hairline-strong)] flex items-center gap-2 hover:bg-[var(--cl-panel)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cl-ink)]/30 transition-colors text-[var(--cl-muted)] hover:text-[var(--cl-ink)] text-sm font-medium"
+            className="shrink-0 h-7 px-3 rounded-full bg-transparent border border-[var(--cl-hairline-strong)] flex items-center gap-1.5 hover:bg-[var(--cl-panel)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cl-ink)]/30 transition-colors text-[var(--cl-muted)] hover:text-[var(--cl-ink)] text-xs font-medium"
           >
             Browse all cards instead
           </button>
@@ -296,7 +290,7 @@ export default function CardCarousel({
         </div>
 
         {/* Right: compact analysis */}
-        <CardInsightsPanel card={activeCard} />
+        <CardInsightsPanel card={activeCard} whyBullets={activeWhy} />
       </div>
 
       {/* Lower: card identity + headline facts. Fixed (fluid) height, content
@@ -326,16 +320,6 @@ export default function CardCarousel({
               </div>
             </div>
 
-            {activeWhy && activeWhy.length > 0 && (
-              <ul className="mt-3 flex flex-col items-center gap-1">
-                {topReasons.map((line, i) => (
-                  <li key={i} className="flex items-baseline justify-center gap-2 text-sm text-[var(--cl-ink)]">
-                    <span aria-hidden className="h-1 w-1 rounded-full bg-[var(--cl-gold)] shrink-0" />
-                    <span>{line}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
             {advisorLoading ? (
               <p className="mt-2 flex items-center justify-center gap-2 text-xs text-[var(--cl-muted)]">
                 <Sparkles className="w-3.5 h-3.5 animate-pulse text-[var(--cl-gold)]" /> Analyzing your wallet…
@@ -358,7 +342,23 @@ export default function CardCarousel({
           <div className="border-t border-[var(--cl-hairline)] pt-4 text-center">
             <p className="text-xs font-semibold uppercase tracking-wider text-[var(--cl-muted)]">Cards above your selected annual fee limit</p>
             <p className="mt-2 text-sm text-[var(--cl-muted)]">
-              {aboveLimit.slice(0, 3).map((card) => card.name).join(' · ')}
+              {aboveLimit.slice(0, 3).map((card, i) => (
+                <span key={card.id}>
+                  {i > 0 && ' · '}
+                  {card.applyUrl ? (
+                    <a
+                      href={card.applyUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="underline decoration-[var(--cl-hairline-strong)] underline-offset-2 hover:text-[var(--cl-ink)] transition-colors"
+                    >
+                      {card.name}
+                    </a>
+                  ) : (
+                    card.name
+                  )}
+                </span>
+              ))}
             </p>
           </div>
         </div>

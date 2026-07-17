@@ -57,8 +57,11 @@ function deriveFilters(a: Answers): string[] {
   // push toward premium (PRD §13, §28).
   if (a.maxFee === 0) ids.push('no-fee');
   // Heaviest specific spend category becomes a soft ordering hint (dollars).
+  // "general" is included in the comparison (even though it maps to no
+  // filter) so the default wallet — mostly everyday spending — doesn't
+  // spuriously hand a specific category like groceries the top spot.
   const spendGoal: Record<string, string> = { dining: 'dining', groceries: 'groceries', gas: 'gas' };
-  const cats = ['dining', 'groceries', 'gas', 'travel'] as const;
+  const cats = ['dining', 'groceries', 'gas', 'travel', 'general'] as const;
   const top = cats.map((k) => [k, a.spend[k] ?? 0] as const).sort((x, y) => y[1] - x[1])[0];
   if (top && top[1] >= 400) {
     if (spendGoal[top[0]]) ids.push(spendGoal[top[0]]);

@@ -348,8 +348,8 @@ function CompareColumn({
       {/* Masthead: identity + controls + product shot */}
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <p className="font-display text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--cl-muted)]">{card.issuer}</p>
-          <h2 className="mt-2 font-display font-semibold text-[1.75rem] md:text-[2.1rem] text-[var(--cl-ink)] leading-[1.1] text-balance">
+          <p className="mt-1.5 font-display text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--cl-muted)]">{card.issuer}</p>
+          <h2 className="mt-2 font-display font-semibold text-[1.5rem] md:text-[1.85rem] text-[var(--cl-ink)] leading-[1.1] text-balance">
             {card.name}
           </h2>
           <div className="mt-4 h-[3px] w-12 rounded-full bg-[var(--cl-gold)]" />

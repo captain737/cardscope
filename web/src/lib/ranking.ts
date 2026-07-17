@@ -425,7 +425,9 @@ function computeSoftScore(card: RankingCard, softCategories: SoftCategory[] = []
 function filtersToContext(filters: string[]): PublicRankingContext {
   const softCategories = filters.map((f) => SPEND_FILTERS[f]).filter((f): f is SoftCategory => Boolean(f));
   const account = filters.find((f) => FILTER_BY_ID[f]?.group === 'account');
-  const reward = filters.find((f) => FILTER_BY_ID[f]?.group === 'reward');
+  // Rewards and Cash Back are mutually exclusive (enforced in lib/filters.ts'
+  // toggleFilter), so check explicitly rather than trust array order.
+  const reward = filters.includes('cashback') ? 'cashback' : filters.includes('rewards') ? 'rewards' : undefined;
 
   // Segment stays undefined unless the user expresses a reward/account/balance
   // intent. Undefined means "all reward types" — quality-only filters like

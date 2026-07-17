@@ -5,12 +5,14 @@ import { aprSections } from '../lib/apr';
 import { topPerkDisplay } from '../lib/rewards';
 
 // The compact analysis shown in the upper-right of the results view: just
-// Best For, Approval Difficulty, Redemption Options, and the folded Card
-// Details (APR, credit, foreign fee, top perk, best for). Scrolls internally
-// if it's taller than its column.
-export default function CardInsightsPanel({ card }: { card: CreditCard }) {
+// Best For (or, in match mode, the personalized "Fits you because" reasons),
+// Approval Difficulty, Redemption Options, and the folded Card Details (APR,
+// credit, foreign fee, top perk). Scrolls internally if it's taller than its
+// column.
+export default function CardInsightsPanel({ card, whyBullets }: { card: CreditCard; whyBullets?: string[] }) {
   const ins = cardInsights(card);
   const apr = aprSections(card.facts);
+  const personalized = !!whyBullets && whyBullets.length > 0;
   // "Best for" is intentionally omitted here — it has its own bulleted section
   // below. Foreign fee and Top perk share the last row (two columns).
   const details: { label: string; value: string }[] = [
@@ -35,9 +37,9 @@ export default function CardInsightsPanel({ card }: { card: CreditCard }) {
         <Section title="Redemption options"><p className="text-[15px] text-[var(--cl-ink)] leading-relaxed">{ins.redemption.join(' · ')}</p></Section>
       </div>
 
-      <Section title="Best for" divided>
-        <ul className="grid grid-cols-1 sm:grid-cols-3 gap-x-6 gap-y-2.5">
-          {ins.bestFor.slice(0, 3).map((it, i) => (
+      <Section title={personalized ? 'Fits you because' : 'Best for'} divided>
+        <ul className={personalized ? 'flex flex-col gap-2' : 'grid grid-cols-1 sm:grid-cols-3 gap-x-6 gap-y-2.5'}>
+          {(personalized ? whyBullets! : ins.bestFor.slice(0, 3)).map((it, i) => (
             <li key={i} className="flex items-start gap-2 min-w-0 text-[15px] text-[var(--cl-ink)] leading-snug">
               <Check className="w-4 h-4 mt-[0.15em] shrink-0 text-[var(--cl-gold)]" strokeWidth={2.5} />
               <span>{it}</span>

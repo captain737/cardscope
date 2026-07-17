@@ -57,6 +57,9 @@ export const FILTER_BY_ID: Record<string, FilterDef> = Object.fromEntries(
 );
 
 const ACCOUNT_IDS = FILTERS.filter(f => f.group === 'account').map(f => f.id);
+// Reward currency is single-select too: a card earns points/miles ("Rewards")
+// or cash back, never both, so picking one clears the other.
+const REWARD_IDS = FILTERS.filter(f => f.group === 'reward').map(f => f.id);
 
 // Quality conflicts: Premium (annual-fee, lounge-tier) and No Annual Fee
 // are contradictory.
@@ -67,8 +70,9 @@ const QUALITY_CONFLICTS: Record<string, string[]> = {
 
 /**
  * Toggles a filter, enforcing the group rules: selecting an account filter
- * clears any other account filter (single-select field); quality conflicts
- * are removed. Goals stack freely.
+ * clears any other account filter, selecting a reward currency clears the
+ * other one (both single-select fields); quality conflicts are removed.
+ * Goals stack freely.
  */
 export function toggleFilter(active: string[], id: string): string[] {
   if (active.includes(id)) return active.filter(f => f !== id);
@@ -78,6 +82,9 @@ export function toggleFilter(active: string[], id: string): string[] {
 
   if (def?.group === 'account') {
     next = next.filter(f => !ACCOUNT_IDS.includes(f)); // one account at a time
+  }
+  if (def?.group === 'reward') {
+    next = next.filter(f => !REWARD_IDS.includes(f)); // rewards vs cash back, never both
   }
   const conflicts = QUALITY_CONFLICTS[id] || [];
   next = next.filter(f => !conflicts.includes(f));
@@ -101,4 +108,33 @@ export function cardMatchesFilter(cardTags: string[] | undefined, filterId: stri
   const def = FILTER_BY_ID[filterId];
   if (!def || !cardTags) return false;
   return def.matchTags.some(t => cardTags.includes(t));
+}
+
+/** Human-readable name for a quality filter as a trailing clause ("with ___"). */
+const QUALITY_PHRASE: Record<string, string> = {
+  'no-fee': 'no annual fee',
+  premium: 'premium perks',
+};
+
+/**
+ * Renders the active filters as a noun phrase for the rank subtext — e.g.
+ * "Personal Cash Back for Dining with no annual fee". Returns null when no
+ * filters are active, so callers can fall back to a generic label.
+ */
+export function describeFilters(activeFilters: string[]): string | null {
+  const defs = activeFilters.map(id => FILTER_BY_ID[id]).filter((d): d is FilterDef => !!d);
+  if (!defs.length) return null;
+
+  const account = defs.find(d => d.group === 'account');
+  const reward = defs.find(d => d.group === 'reward');
+  const spend = defs.filter(d => d.group === 'spend');
+  const quality = defs.filter(d => d.group === 'quality');
+
+  let phrase = [account?.label, reward?.label].filter(Boolean).join(' ');
+  if (spend.length) phrase += `${phrase ? ' for ' : 'For '}${spend.map(d => d.label).join(' & ')}`;
+  if (quality.length) {
+    const qualityPhrase = quality.map(d => QUALITY_PHRASE[d.id] ?? d.label.toLowerCase()).join(' & ');
+    phrase += `${phrase ? ' with ' : 'With '}${qualityPhrase}`;
+  }
+  return phrase || null;
 }
