@@ -46,7 +46,7 @@ export default function CardFacts({ card }: CardFactsProps) {
                   {rewardsBullets.map((b, j) => (
                     <li key={j} className="flex gap-2.5 min-w-0 text-[15px] font-medium text-[var(--cl-ink)] leading-relaxed">
                       <span aria-hidden className="mt-[0.55em] h-1.5 w-1.5 rounded-full bg-[var(--cl-gold)] shrink-0" />
-                      <span className="line-clamp-1">{b}</span>
+                      <span className="line-clamp-2">{b}</span>
                     </li>
                   ))}
                 </ul>

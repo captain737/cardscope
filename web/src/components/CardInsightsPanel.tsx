@@ -15,8 +15,13 @@ export default function CardInsightsPanel({ card, whyBullets }: { card: CreditCa
   const personalized = !!whyBullets && whyBullets.length > 0;
   // "Best for" is intentionally omitted here — it has its own bulleted section
   // below. Foreign fee and Top perk share the last row (two columns).
-  const details: { label: string; value: string }[] = [
-    ...apr.map((s) => ({ label: `${s.label} APR`, value: s.value })),
+  // Short (<100 char) glossary for the APR rows, surfaced via a hover tooltip.
+  const APR_HINTS: Record<string, string> = {
+    Intro: 'A limited-time reduced interest rate for a set period after you open the card.',
+    Regular: "The ongoing yearly interest rate charged on any balance you don't pay in full.",
+  };
+  const details: { label: string; value: string; hint?: string }[] = [
+    ...apr.map((s) => ({ label: `${s.label} APR`, value: s.value, hint: APR_HINTS[s.label] })),
     { label: 'Foreign fee', value: card.facts.foreignFee },
     { label: 'Top perk', value: topPerkDisplay(card.facts) },
   ];
@@ -26,7 +31,9 @@ export default function CardInsightsPanel({ card, whyBullets }: { card: CreditCa
       <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-[clamp(0.9rem,1.8vh,1.35rem)]">
         {details.map((d) => (
           <div key={d.label} className="flex flex-col gap-1.5">
-            <dt className="font-display text-[10.5px] font-semibold uppercase tracking-[0.1em] text-[var(--cl-muted)]">{d.label}</dt>
+            <dt className="font-display text-[10.5px] font-semibold uppercase tracking-[0.1em] text-[var(--cl-muted)]">
+              {d.label}{d.hint && <InfoStar text={d.hint} />}
+            </dt>
             <dd className="text-[15px] font-medium text-[var(--cl-ink)] leading-snug [overflow-wrap:anywhere]">{d.value}</dd>
           </div>
         ))}
@@ -48,6 +55,27 @@ export default function CardInsightsPanel({ card, whyBullets }: { card: CreditCa
         </ul>
       </Section>
     </div>
+  );
+}
+
+// A gold "*" that reveals a short definition on hover or keyboard focus.
+function InfoStar({ text }: { text: string }) {
+  return (
+    <span className="relative inline-block group align-super">
+      <button
+        type="button"
+        aria-label={text}
+        className="ml-0.5 text-[var(--cl-gold)] cursor-help rounded-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cl-gold)]/40"
+      >
+        *
+      </button>
+      <span
+        role="tooltip"
+        className="pointer-events-none absolute bottom-full left-1/2 z-30 mb-1.5 w-max max-w-[14rem] -translate-x-1/2 rounded-lg bg-[var(--cl-ink)] px-2.5 py-1.5 text-[11px] font-medium normal-case leading-snug tracking-normal text-[var(--cl-bg)] opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100"
+      >
+        {text}
+      </span>
+    </span>
   );
 }
 
