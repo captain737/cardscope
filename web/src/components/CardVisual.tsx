@@ -4,7 +4,18 @@ import { Wifi } from 'lucide-react';
 
 interface CardVisualProps {
   card: CreditCardType;
+  // 'fluid' scales the card with the viewport (used in the results carousel so
+  // it fits every desktop size). 'default' is a fixed landscape face used where
+  // the card is scaled by a transform (Compare thumbnails).
+  variant?: 'default' | 'fluid';
 }
+
+// Landscape card proportions (~1.586:1). Fluid variant is height-driven so the
+// whole composition scales with viewport height; width follows the aspect.
+const SIZE = {
+  default: 'w-[360px] h-[228px] md:w-[420px] md:h-[266px]',
+  fluid: 'h-[clamp(180px,23vh,300px)] aspect-[420/266]',
+} as const;
 
 // Assets that aren't a flat card face. We rotate art 90° to stand it up in
 // the portrait slot, which turns banners, logos, and angled 3D photos into
@@ -17,15 +28,16 @@ function isLikelyCardArt(url?: string): boolean {
   return Boolean(url) && !BAD_ART.test(url!);
 }
 
-export default function CardVisual({ card }: CardVisualProps) {
+export default function CardVisual({ card, variant = 'default' }: CardVisualProps) {
   const [artFailed, setArtFailed] = useState(false);
   const showArt = isLikelyCardArt(card.imageUrl) && !artFailed;
+  const size = SIZE[variant];
 
   // Real card art shown in its natural landscape orientation (flat card face,
   // ~1.586:1). Issuer art is already landscape, so no rotation is needed.
   if (showArt) {
     return (
-      <div className="relative w-[360px] h-[228px] md:w-[420px] md:h-[266px] flex items-center justify-center">
+      <div className={`relative ${size} flex items-center justify-center`}>
         <img
           src={card.imageUrl}
           alt={`${card.name} card art`}
@@ -52,7 +64,7 @@ export default function CardVisual({ card }: CardVisualProps) {
   // Fallback: the stylized gradient face, for cards the crawler hasn't
   // found art for (and all mock data).
   return (
-    <div className={`relative w-[360px] h-[228px] md:w-[420px] md:h-[266px] rounded-[1.25rem] md:rounded-[1.5rem] overflow-hidden shadow-2xl p-5 md:p-6 flex flex-col justify-between ${card.gradient}`}>
+    <div className={`relative ${size} rounded-[1.25rem] md:rounded-[1.5rem] overflow-hidden shadow-2xl p-5 md:p-6 flex flex-col justify-between ${card.gradient}`}>
       {/* Texture / Noise overlay */}
       <div
         className="absolute inset-0 opacity-20 mix-blend-overlay"

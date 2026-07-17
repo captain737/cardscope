@@ -20,8 +20,8 @@ export default function CardInsightsPanel({ card }: { card: CreditCard }) {
   ];
 
   return (
-    <div className="w-full h-full overflow-y-auto hide-scrollbar text-left flex flex-col gap-7 pr-1 pt-6 lg:pt-16">
-      <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-5">
+    <div className="w-full text-left flex flex-col gap-[clamp(0.9rem,2.2vh,1.9rem)] pr-1">
+      <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-[clamp(0.9rem,1.8vh,1.35rem)]">
         {details.map((d) => (
           <div key={d.label} className="flex flex-col gap-1.5">
             <dt className="font-display text-[10.5px] font-semibold uppercase tracking-[0.1em] text-[var(--cl-muted)]">{d.label}</dt>
@@ -30,7 +30,7 @@ export default function CardInsightsPanel({ card }: { card: CreditCard }) {
         ))}
       </dl>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 border-t border-[var(--cl-hairline)] pt-7">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 border-t border-[var(--cl-hairline)] pt-[clamp(0.85rem,2vh,1.75rem)]">
         <Section title="Approval difficulty"><p className="text-[15px] text-[var(--cl-ink)] leading-relaxed">{ins.approval.label}</p></Section>
         <Section title="Redemption options"><p className="text-[15px] text-[var(--cl-ink)] leading-relaxed">{ins.redemption.join(' · ')}</p></Section>
       </div>
@@ -51,7 +51,7 @@ export default function CardInsightsPanel({ card }: { card: CreditCard }) {
 
 function Section({ title, children, divided }: { title: string; children: React.ReactNode; divided?: boolean }) {
   return (
-    <div className={divided ? 'border-t border-[var(--cl-hairline)] pt-7' : undefined}>
+    <div className={divided ? 'border-t border-[var(--cl-hairline)] pt-[clamp(0.85rem,2vh,1.75rem)]' : undefined}>
       <p className="font-display text-[11px] font-semibold uppercase tracking-[0.11em] text-[var(--cl-muted)] mb-3">{title}</p>
       {children}
     </div>

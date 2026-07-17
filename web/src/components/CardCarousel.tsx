@@ -174,7 +174,7 @@ export default function CardCarousel({
   }
 
   return (
-    <section className="compare-light relative w-full min-h-screen lg:h-screen lg:overflow-hidden pt-24 pb-12 flex flex-col items-center bg-[var(--cl-bg)]">
+    <section className="compare-light relative w-full min-h-screen pt-[clamp(4.25rem,7vh,6.5rem)] pb-[clamp(1.25rem,3vh,2.5rem)] flex flex-col items-center bg-[var(--cl-bg)]">
       {matchMode && (
         <div className="relative z-20 w-full flex flex-col items-center gap-3 px-4 text-center mb-2">
           <h2 className="font-display font-semibold text-3xl md:text-4xl text-[var(--cl-ink)]">Your best matches</h2>
@@ -187,16 +187,21 @@ export default function CardCarousel({
         </div>
       )}
 
+      {/* Auto-margins center the whole group vertically when it fits, and cleanly
+          top-align + scroll (never clip) when the viewport is too short. */}
+      <div className="w-full flex flex-col items-center my-auto">
       {activeCard ? (
       <>
-      {/* Upper (top ~48% of the page): carousel (left) + analysis (right).
-          The section's pt-24 (6rem) is subtracted so the block ends at the
-          48vh line and the card name below starts from that earlier point. */}
-      <div className="relative z-10 w-full px-6 md:px-12 grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-24 lg:h-[calc(48vh-6rem)] shrink-0">
-        {/* Left: carousel (edges fade into the page bg) with the provider
-            toggle sitting directly below the main card. */}
-        <div className="flex flex-col h-[300px] lg:h-full min-h-0">
-          <div className="relative flex-1 min-h-0 flex items-center justify-center perspective-[1200px] overflow-hidden [mask-image:linear-gradient(to_right,transparent,#000_14%,#000_86%,transparent)]">
+      {/* Centered stage: caps its width on large monitors and scales fluidly so
+          it fits every desktop height. The whole section is vertically centered
+          and grows to scroll only on very short screens (never clips). */}
+      <div className="w-full flex flex-col gap-[clamp(1rem,3vh,3rem)] max-w-[105rem] mx-auto">
+      {/* Upper: carousel (left) + analysis (right). */}
+      <div className="relative z-10 w-full px-[clamp(1rem,3vw,3rem)] grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-[clamp(3rem,6vw,7rem)] items-center">
+        {/* Left: carousel (edges fade into the page bg) with the controls
+            sitting directly below the main card. */}
+        <div className="flex flex-col items-center">
+          <div className="relative w-full h-[clamp(210px,27vh,340px)] flex items-center justify-center perspective-[1200px] overflow-hidden [mask-image:linear-gradient(to_right,transparent,#000_14%,#000_86%,transparent)]">
           <div className="relative w-full h-full flex justify-center items-center transform-style-3d">
           <AnimatePresence initial={false}>
             {cards.map((card, index) => {
@@ -233,7 +238,7 @@ export default function CardCarousel({
                     if (offset > 0) nextCard();
                   }}
                 >
-                  <CardVisual card={card} />
+                  <CardVisual card={card} variant="fluid" />
                 </motion.div>
               );
             })}
@@ -292,11 +297,8 @@ export default function CardCarousel({
         <CardInsightsPanel card={activeCard} />
       </div>
 
-      {/* Lower: card identity with inline actions + headline facts. Fixed
-          height on desktop (content top-aligned) so the search bar below always
-          starts at the same vertical position regardless of how tall the active
-          card's reward list is; the page's remaining slack falls below the bar. */}
-      <div aria-live="polite" className="relative z-20 w-full flex flex-col items-center gap-4 px-4 mt-6 lg:mt-[7vh] lg:h-[33vh]">
+      {/* Lower: card identity + headline facts, centered under the stage. */}
+      <div aria-live="polite" className="relative z-20 w-full flex flex-col items-center gap-[clamp(0.75rem,2vh,1.25rem)] px-4">
         <AnimatePresence mode="wait">
           <motion.div
             key={activeCard.id}
@@ -311,7 +313,7 @@ export default function CardCarousel({
             <div className="w-full flex justify-center px-2">
               <div className="text-center">
                 <p className="font-display text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--cl-gold)] mb-1">{activeCard.issuer}</p>
-                <h1 className="font-display font-semibold text-2xl md:text-3xl text-[var(--cl-ink)] text-balance">{activeCard.name}</h1>
+                <h1 className="font-display font-semibold text-[clamp(1.5rem,2.4vw,2.4rem)] leading-[1.1] text-[var(--cl-ink)] text-balance">{activeCard.name}</h1>
                 {ranked && (
                   <p className="mt-1 text-sm font-medium text-[var(--cl-muted)]">
                     <span className="text-[var(--cl-gold)] font-semibold">#{currentIndex + 1}</span> {rankLabel}
@@ -345,6 +347,7 @@ export default function CardCarousel({
         {/* Headline facts: Annual Fee · Rewards · Sign-up Bonus */}
         <CardFacts card={activeCard} />
       </div>
+      </div>
 
       {matchMode && aboveLimit.length > 0 && (
         <div className="relative z-10 mt-5 w-full max-w-3xl px-4">
@@ -374,7 +377,7 @@ export default function CardCarousel({
           Small top gap (less padding before the search bar); the section's
           pb-8 plus the natural bottom slack open the space below it. */}
       {!matchMode && (
-        <div className="relative z-20 w-full shrink-0 flex flex-col items-center gap-5 mt-2 lg:mt-3">
+        <div className="relative z-20 w-full shrink-0 flex flex-col items-center gap-[clamp(0.75rem,2vh,1.5rem)] mt-[clamp(0.75rem,3vh,2.5rem)]">
           <div className="w-full px-4">
             <AISearchBar
               onQueryChange={(q) => { if (q.trim()) setStarted(true); }}
@@ -400,6 +403,7 @@ export default function CardCarousel({
           <BubbleFilters activeFilters={activeFilters} onFiltersChange={setActiveFilters} />
         </div>
       )}
+      </div>
     </section>
   );
 }

@@ -124,7 +124,7 @@ export default function Compare({ watchlist, setWatchlist, ownedCards, setOwnedC
   );
 
   return (
-    <div className="compare-light min-h-screen bg-[var(--cl-bg)] pt-24 pb-24 px-4 md:px-8">
+    <div className="compare-light min-h-screen overflow-x-clip bg-[var(--cl-bg)] pt-24 pb-24 px-4 md:px-8">
       {/* Mobile / tablet: horizontal wallet rails on top. On desktop these
           live as vertical drawers on the page edges instead. */}
       <div className="lg:hidden grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
@@ -188,12 +188,12 @@ export default function Compare({ watchlist, setWatchlist, ownedCards, setOwnedC
             /* Empty stage: two hand-placed dashed slots waiting for cards. */
             <div className="flex flex-col xl:flex-row items-center justify-center gap-10 xl:gap-8 py-14 min-h-[68vh] xl:perspective-midrange">
               <TiltedSlot
-                tilt="-rotate-[5deg] xl:rotate-[12deg] xl:rotate-y-[22deg]"
+                tilt="-rotate-[5deg] xl:rotate-[10deg] xl:rotate-y-[15deg]"
                 onClick={() => openSearch(0)}
                 onDrop={(e) => handleDrop(e, 0)}
               />
               <TiltedSlot
-                tilt="rotate-[4deg] xl:-rotate-[11deg] xl:-rotate-y-[20deg]"
+                tilt="rotate-[4deg] xl:-rotate-[9deg] xl:-rotate-y-[14deg]"
                 onClick={() => openSearch(1)}
                 onDrop={(e) => handleDrop(e, 1)}
               />
@@ -295,7 +295,7 @@ function TiltedSlot({ tilt, onClick, onDrop }: { tilt: string; onClick: () => vo
       onDragOver={(e) => e.preventDefault()}
       onDrop={onDrop}
       aria-label="Select a card to compare"
-      className={`${tilt} hover:rotate-0 hover:rotate-y-0 w-[320px] h-[202px] md:w-[400px] md:h-[252px] xl:w-[520px] xl:h-[328px] rounded-[1.25rem] border-2 border-dashed border-[var(--cl-hairline-strong)] flex flex-col items-center justify-center gap-2.5 xl:gap-4 text-[var(--cl-muted)] hover:text-[var(--cl-ink)] hover:border-[var(--cl-ink)]/50 transition-all duration-300 ease-out motion-reduce:transition-none shrink-0`}
+      className={`${tilt} hover:rotate-0 hover:rotate-y-0 w-[clamp(280px,26vw,500px)] aspect-[400/252] rounded-[1.25rem] border-2 border-dashed border-[var(--cl-hairline-strong)] flex flex-col items-center justify-center gap-2.5 xl:gap-4 text-[var(--cl-muted)] hover:text-[var(--cl-ink)] hover:border-[var(--cl-ink)]/50 transition-all duration-300 ease-out motion-reduce:transition-none shrink-0`}
     >
       <Plus className="w-7 h-7 xl:w-10 xl:h-10" strokeWidth={1.25} />
       <span className="font-medium text-[var(--cl-ink)] xl:text-lg">Select a card</span>
