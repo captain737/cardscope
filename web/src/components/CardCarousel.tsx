@@ -196,8 +196,10 @@ export default function CardCarousel({
           it fits every desktop height. The whole section is vertically centered
           and grows to scroll only on very short screens (never clips). */}
       <div className="w-full flex flex-col gap-[clamp(1rem,3vh,3rem)] max-w-[105rem] mx-auto">
-      {/* Upper: carousel (left) + analysis (right). */}
-      <div className="relative z-10 w-full px-[clamp(1rem,3vw,3rem)] grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-[clamp(3rem,6vw,7rem)] items-center">
+      {/* Upper: carousel (left) + analysis (right). Fixed (fluid) height on
+          desktop so the card sits at the same spot regardless of how tall the
+          active card's analysis panel is — keeps positions stable across cards. */}
+      <div className="relative z-10 w-full px-[clamp(1rem,3vw,3rem)] grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-[clamp(3rem,6vw,7rem)] items-center lg:h-[clamp(300px,37vh,420px)]">
         {/* Left: carousel (edges fade into the page bg) with the controls
             sitting directly below the main card. */}
         <div className="flex flex-col items-center">
@@ -297,8 +299,10 @@ export default function CardCarousel({
         <CardInsightsPanel card={activeCard} />
       </div>
 
-      {/* Lower: card identity + headline facts, centered under the stage. */}
-      <div aria-live="polite" className="relative z-20 w-full flex flex-col items-center gap-[clamp(0.75rem,2vh,1.25rem)] px-4">
+      {/* Lower: card identity + headline facts. Fixed (fluid) height, content
+          top-aligned, so the title starts at a constant vertical point and the
+          search bar below always begins at the same place across cards. */}
+      <div aria-live="polite" className="relative z-20 w-full flex flex-col items-center gap-[clamp(0.75rem,2vh,1.25rem)] px-4 lg:h-[clamp(250px,29vh,320px)] lg:overflow-hidden">
         <AnimatePresence mode="wait">
           <motion.div
             key={activeCard.id}

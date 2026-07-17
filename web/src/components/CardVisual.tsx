@@ -55,7 +55,7 @@ export default function CardVisual({ card, variant = 'default' }: CardVisualProp
             // gradient face rather than showing a blurry/undersized image.
             if (w && h && (w <= h || w / h < 1.3 || w / h > 1.8 || w < 200)) setArtFailed(true);
           }}
-          className="w-full h-full object-contain drop-shadow-[0_16px_40px_rgba(0,0,0,0.55)]"
+          className="w-full h-full object-contain"
         />
       </div>
     );

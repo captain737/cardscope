@@ -13,7 +13,8 @@ interface CardFactsProps {
  */
 export default function CardFacts({ card }: CardFactsProps) {
   const reducedMotion = useReducedMotion();
-  const rewardsBullets = cardRewardBullets(card.facts);
+  // Cap at 4 so the headline matrix keeps a bounded height across cards.
+  const rewardsBullets = cardRewardBullets(card.facts).slice(0, 4);
 
   const cells = [
     { label: 'Annual Fee', value: card.facts.annualFee, rewards: false },
@@ -43,14 +44,14 @@ export default function CardFacts({ card }: CardFactsProps) {
               {cell.rewards && rewardsBullets.length >= 1 ? (
                 <ul className="flex flex-col gap-2 text-left">
                   {rewardsBullets.map((b, j) => (
-                    <li key={j} className="flex gap-2.5 text-[15px] font-medium text-[var(--cl-ink)] leading-relaxed">
+                    <li key={j} className="flex gap-2.5 min-w-0 text-[15px] font-medium text-[var(--cl-ink)] leading-relaxed">
                       <span aria-hidden className="mt-[0.55em] h-1.5 w-1.5 rounded-full bg-[var(--cl-gold)] shrink-0" />
-                      <span>{b}</span>
+                      <span className="line-clamp-1">{b}</span>
                     </li>
                   ))}
                 </ul>
               ) : (
-                <p className="text-[15px] font-medium text-[var(--cl-ink)] leading-relaxed max-w-[46ch] [overflow-wrap:anywhere]">{cell.value}</p>
+                <p className="text-[15px] font-medium text-[var(--cl-ink)] leading-relaxed max-w-[46ch] [overflow-wrap:anywhere] line-clamp-4">{cell.value}</p>
               )}
             </div>
           ))}
