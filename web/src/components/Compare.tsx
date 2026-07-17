@@ -295,7 +295,7 @@ function TiltedSlot({ tilt, onClick, onDrop }: { tilt: string; onClick: () => vo
       onDragOver={(e) => e.preventDefault()}
       onDrop={onDrop}
       aria-label="Select a card to compare"
-      className={`${tilt} hover:rotate-0 hover:rotate-y-0 w-[clamp(280px,26vw,500px)] aspect-[400/252] rounded-[1.25rem] border-2 border-dashed border-[var(--cl-hairline-strong)] flex flex-col items-center justify-center gap-2.5 xl:gap-4 text-[var(--cl-muted)] hover:text-[var(--cl-ink)] hover:border-[var(--cl-ink)]/50 transition-all duration-300 ease-out motion-reduce:transition-none shrink-0`}
+      className={`${tilt} hover:rotate-0 hover:rotate-y-0 w-[clamp(238px,22.1vw,425px)] aspect-[400/252] rounded-[1.25rem] border-2 border-dashed border-[var(--cl-hairline-strong)] flex flex-col items-center justify-center gap-2.5 xl:gap-4 text-[var(--cl-muted)] hover:text-[var(--cl-ink)] hover:border-[var(--cl-ink)]/50 transition-all duration-300 ease-out motion-reduce:transition-none shrink-0`}
     >
       <Plus className="w-7 h-7 xl:w-10 xl:h-10" strokeWidth={1.25} />
       <span className="font-medium text-[var(--cl-ink)] xl:text-lg">Select a card</span>

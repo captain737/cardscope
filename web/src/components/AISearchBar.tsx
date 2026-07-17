@@ -12,12 +12,19 @@ const PLACEHOLDERS = [
 interface AISearchBarProps {
   onQueryChange: (query: string) => void;
   onFiltersParsed: (filters: string[]) => void;
+  /** Fired only on an explicit submit (arrow press / Enter) with non-empty
+   *  text. Used by the landing hero to advance to results only on submit. */
+  onSubmit?: () => void;
+  /** When true, typing does nothing — the bar reacts only when the user
+   *  submits. Keeps the onboarding page from jumping to results mid-type;
+   *  the results-view bar leaves this off for live filtering. */
+  submitOnly?: boolean;
   /** Optional element pinned inside the bar on the left (e.g. a provider
    *  filter), separated from the input by a divider. */
   leftSlot?: React.ReactNode;
 }
 
-export default function AISearchBar({ onQueryChange, onFiltersParsed, leftSlot }: AISearchBarProps) {
+export default function AISearchBar({ onQueryChange, onFiltersParsed, onSubmit, submitOnly, leftSlot }: AISearchBarProps) {
   const [value, setValue] = useState('');
   const [parsing, setParsing] = useState(false);
   const [placeholder, setPlaceholder] = useState('');
@@ -77,6 +84,9 @@ export default function AISearchBar({ onQueryChange, onFiltersParsed, leftSlot }
 
   const handleChange = (next: string) => {
     setValue(next);
+    // In submit-only mode typing never triggers anything — the user must
+    // press the arrow (or Enter) to advance.
+    if (submitOnly) return;
     clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
       onQueryChange(next);
@@ -85,9 +95,13 @@ export default function AISearchBar({ onQueryChange, onFiltersParsed, leftSlot }
   };
 
   const submit = () => {
+    // Require typed text — mirrors the disabled arrow, and stops an empty
+    // Enter from advancing the onboarding page.
+    if (!value.trim()) return;
     clearTimeout(debounceRef.current);
     onQueryChange(value);
     runParse(value);
+    onSubmit?.();
   };
 
   const clear = () => {

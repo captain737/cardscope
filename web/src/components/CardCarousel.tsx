@@ -149,14 +149,16 @@ export default function CardCarousel({
   if (!showResults) {
     return (
       <section className="compare-light relative w-full min-h-screen flex flex-col items-center justify-center px-6 sm:px-12 lg:px-24 bg-[var(--cl-bg)]">
-        <div className="w-full max-w-4xl flex flex-col items-center gap-7 -mt-16">
+        <div className="w-full max-w-4xl flex flex-col items-center gap-7 mt-6">
           <div className="text-center">
             <h1 className="font-display font-semibold text-4xl md:text-5xl text-[var(--cl-ink)] text-balance">Find what fits you best</h1>
             <p className="mt-3 text-[var(--cl-muted)]">Describe your ideal card, or tap a filter to begin.</p>
           </div>
           <AISearchBar
-            onQueryChange={(q) => { if (q.trim()) setStarted(true); }}
-            onFiltersParsed={(f) => { setActiveFilters(f); setStarted(true); }}
+            submitOnly
+            onQueryChange={() => {}}
+            onFiltersParsed={setActiveFilters}
+            onSubmit={() => setStarted(true)}
           />
           <BubbleFilters
             activeFilters={activeFilters}
@@ -311,7 +313,7 @@ export default function CardCarousel({
             <div className="w-full flex justify-center px-2">
               <div className="text-center">
                 <p className="font-display text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--cl-gold)] mb-1">{activeCard.issuer}</p>
-                <h1 className="font-display font-semibold text-[clamp(1.5rem,2.4vw,2.4rem)] leading-[1.1] text-[var(--cl-ink)] text-balance">{activeCard.name}</h1>
+                <h1 className="font-display font-semibold text-[clamp(1.125rem,1.7vw,1.75rem)] leading-[1.1] text-[var(--cl-ink)] text-balance">{activeCard.name}</h1>
                 {ranked && (
                   <p className="mt-1 text-sm font-medium text-[var(--cl-muted)]">
                     <span className="text-[var(--cl-gold)] font-semibold">#{currentIndex + 1}</span> {rankLabel}
@@ -337,7 +339,11 @@ export default function CardCarousel({
       </div>
       </div>
 
-      {matchMode && aboveLimit.length > 0 && (
+      {/* PARKED FOR THE FUTURE: the "cards above your selected annual fee
+          limit" suggestions. Stashed off with `false &&` — the aboveLimit
+          data still computes in buildDeck/effect, so re-enabling is just
+          deleting the `false &&`. */}
+      {false && matchMode && aboveLimit.length > 0 && (
         <div className="relative z-10 mt-5 w-full max-w-3xl px-4">
           <div className="border-t border-[var(--cl-hairline)] pt-4 text-center">
             <p className="text-xs font-semibold uppercase tracking-wider text-[var(--cl-muted)]">Cards above your selected annual fee limit</p>

@@ -80,20 +80,44 @@ export default function FindMyCard({ open, onClose, onComplete }: FindMyCardProp
   // prefilled the rest of the questionnaire from it.
   const [welcomeBack, setWelcomeBack] = useState(false);
 
-  // Prefill a returning visitor's details each time the sheet opens.
+  // Prefill a returning visitor's details each time the sheet opens —
+  // including every prior answer (credit, type, rewards, fee, spend), so the
+  // whole questionnaire comes back exactly as they last left it, no email
+  // lookup required.
   useEffect(() => {
     if (!open) return;
     const p = loadProfile();
     const [first = '', ...rest] = (p.name || '').split(' ');
+    const a = (p.answers || {}) as Partial<Answers> & { hasCard?: boolean };
     setAnswers({
       ...BLANK,
       firstName: first,
       lastName: rest.join(' '),
       email: p.email || '',
       ownedCards: p.ownedCards || [],
+      hasCard: typeof a.hasCard === 'boolean' ? a.hasCard : undefined,
+      credit: typeof a.credit === 'string' ? a.credit : undefined,
+      type: typeof a.type === 'string' ? a.type : undefined,
+      rewards: typeof a.rewards === 'string' ? a.rewards : undefined,
+      maxFee: typeof a.maxFee === 'number' ? a.maxFee : BLANK.maxFee,
+      spend: a.spend && typeof a.spend === 'object' ? (a.spend as Record<string, number>) : BLANK.spend,
     });
     setIndex(0);
   }, [open]);
+
+  // A completed prior run (saved on finish) — lets us offer a jump straight
+  // back to those matches from the intro step.
+  const priorProfile = useMemo(() => loadProfile(), [open]);
+  const hasPriorMatch = !!(priorProfile.filters?.length ||
+    (priorProfile.answers && (priorProfile.answers.rewards || priorProfile.answers.type)));
+
+  const seePriorMatches = () => onComplete({
+    filters: priorProfile.filters || [],
+    ownedCards: priorProfile.ownedCards || [],
+    name: priorProfile.name,
+    email: priorProfile.email,
+    answers: priorProfile.answers,
+  });
 
   // Close on Escape.
   useEffect(() => {
@@ -251,6 +275,17 @@ export default function FindMyCard({ open, onClose, onComplete }: FindMyCardProp
                 </>
               )}
             </div>
+
+            {/* Returning visitor: jump straight back to the matches from their
+                last completed run, without redoing the questionnaire. */}
+            {step === 'email' && hasPriorMatch && (
+              <button
+                onClick={seePriorMatches}
+                className="mt-8 text-sm font-medium text-[var(--cl-muted)] hover:text-[var(--cl-ink)] underline underline-offset-4 decoration-[var(--cl-hairline-strong)] hover:decoration-[var(--cl-ink)] transition-colors"
+              >
+                See my best matches from before →
+              </button>
+            )}
           </motion.div>
         </motion.div>
       )}
