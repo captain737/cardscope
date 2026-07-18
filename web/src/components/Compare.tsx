@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
-import { X, Search, Shuffle, Wallet, Bookmark, Check, Minus, ArrowUpRight, Plus, ChevronDown, ChevronLeft } from 'lucide-react';
+import { X, Search, Shuffle, Wallet, Bookmark, Check, Minus, ArrowUpRight, Plus, ChevronDown, ChevronLeft, LayoutGrid, Zap, PiggyBank } from 'lucide-react';
 import { useCards } from '../hooks/useCards';
 import CardVisual from './CardVisual';
 import { CreditCard } from '../types';
@@ -12,6 +12,7 @@ interface CompareProps {
   setWatchlist: React.Dispatch<React.SetStateAction<string[]>>;
   ownedCards: string[];
   setOwnedCards: React.Dispatch<React.SetStateAction<string[]>>;
+  onFindClick?: () => void;
 }
 
 // --- Fact parsing --------------------------------------------------------
@@ -53,7 +54,7 @@ function parity(card: CreditCard): { label: string; state: Tri }[] {
   ];
 }
 
-export default function Compare({ watchlist, setWatchlist, ownedCards, setOwnedCards }: CompareProps) {
+export default function Compare({ watchlist, setWatchlist, ownedCards, setOwnedCards, onFindClick }: CompareProps) {
   const { cards: allCards } = useCards();
   // Exactly two comparison slots.
   const [slots, setSlots] = useState<(string | null)[]>([null, null]);
@@ -111,7 +112,10 @@ export default function Compare({ watchlist, setWatchlist, ownedCards, setOwnedC
     ? allCards.filter((c) => cardMatchesQuery(c, searchQuery))
     : allCards;
 
-  const hasAny = slots.some((s) => s);
+  // The detailed side-by-side comparison only appears once BOTH slots are
+  // filled; until then the hero shows the two slots (filled ones preview the
+  // chosen card).
+  const hasBoth = slots.every((s) => s);
 
   const watchlistAddMini = (
     <button
@@ -150,7 +154,7 @@ export default function Compare({ watchlist, setWatchlist, ownedCards, setOwnedC
 
       {/* Desktop: My Cards + Watchlist drawers docked to the left screen edge,
           stacked vertically. The comparison stage is offset right to clear them. */}
-      <div className="hidden lg:flex fixed left-0 top-[4.5rem] bottom-4 z-30 w-[178px] flex-col gap-3">
+      <div className="hidden lg:flex fixed left-0 top-[4.5rem] bottom-4 z-30 w-[208px] flex-col gap-3">
         <VerticalRail
           label="My Cards"
           icon={<Wallet className="w-3.5 h-3.5" />}
@@ -169,9 +173,10 @@ export default function Compare({ watchlist, setWatchlist, ownedCards, setOwnedC
           onRemove={(id) => setWatchlist((prev) => prev.filter((x) => x !== id))}
           addButton={watchlistAddMini}
         />
+        <StartCTA onFindClick={onFindClick} />
       </div>
 
-      <div className="w-full max-w-[100rem] mx-auto lg:pl-[190px]">
+      <div className="w-full max-w-[100rem] mx-auto lg:pl-[220px]">
         <div className="min-w-0">
           {/* Shuffle control */}
           <div className="flex justify-end mb-2">
@@ -184,19 +189,37 @@ export default function Compare({ watchlist, setWatchlist, ownedCards, setOwnedC
             </button>
           </div>
 
-          {!hasAny ? (
-            /* Empty stage: two hand-placed dashed slots waiting for cards. */
-            <div className="flex flex-col xl:flex-row items-center justify-center gap-10 xl:gap-8 py-14 min-h-[68vh] xl:perspective-midrange">
-              <TiltedSlot
-                tilt="-rotate-[5deg] xl:rotate-[10deg] xl:rotate-y-[15deg]"
-                onClick={() => openSearch(0)}
-                onDrop={(e) => handleDrop(e, 0)}
-              />
-              <TiltedSlot
-                tilt="rotate-[4deg] xl:-rotate-[9deg] xl:-rotate-y-[14deg]"
-                onClick={() => openSearch(1)}
-                onDrop={(e) => handleDrop(e, 1)}
-              />
+          {!hasBoth ? (
+            /* Hero empty state: headline + porcelain slots (a filled slot
+               previews its chosen card) joined by a VS badge. The features
+               strip hugs the bottom of the viewport. */
+            <div className="relative flex flex-col min-h-[calc(100dvh-11rem)]">
+              <div className="relative z-10 flex-1 flex flex-col items-center justify-center py-6">
+                <div className="text-center mx-auto">
+                  <p className="font-display text-[12px] font-bold uppercase tracking-[0.18em] text-[var(--cl-gold)]">Compare cards</p>
+                  <h1 className="mt-3 font-display font-bold text-[clamp(2.25rem,4.6vw,3.85rem)] leading-[1.04] text-[var(--cl-ink)] whitespace-nowrap">Find your perfect match</h1>
+                  <p className="mt-4 text-[clamp(1rem,1.25vw,1.15rem)] text-[var(--cl-muted)] leading-relaxed max-w-xl mx-auto">Compare rewards, fees, and benefits side-by-side to make the best choice.</p>
+                </div>
+
+                <div className="mt-10 xl:mt-14 flex flex-col xl:flex-row items-center justify-center gap-6 xl:gap-10 xl:perspective-midrange">
+                  <HeroSlot
+                    card={cardAt(0)}
+                    tilt="relative z-10 -rotate-[3deg] xl:rotate-[3deg] xl:rotate-y-[13deg]"
+                    onClick={() => openSearch(0)}
+                    onRemove={() => removeSlot(0)}
+                    onDrop={(e) => handleDrop(e, 0)}
+                  />
+                  <HeroSlot
+                    card={cardAt(1)}
+                    tilt="relative z-10 rotate-[3deg] xl:-rotate-[3deg] xl:-rotate-y-[13deg]"
+                    onClick={() => openSearch(1)}
+                    onRemove={() => removeSlot(1)}
+                    onDrop={(e) => handleDrop(e, 1)}
+                  />
+                </div>
+              </div>
+
+              <CompareFeatures />
             </div>
           ) : (
             /* Editorial comparison: two cards side by side */
@@ -286,8 +309,81 @@ export default function Compare({ watchlist, setWatchlist, ownedCards, setOwnedC
 
 // --- Empty stage ----------------------------------------------------------
 
-// A hand-placed dashed card slot: tilted at rest, it straightens under the
-// pointer as a drop/click affordance.
+// A hero slot: the porcelain "Select a card" placeholder when empty, or a
+// preview of the chosen card (with a remove button) once filled. Both slots
+// must be filled before the detailed comparison appears.
+function HeroSlot({
+  card,
+  tilt,
+  onClick,
+  onRemove,
+  onDrop,
+}: {
+  card?: CreditCard;
+  tilt: string;
+  onClick: () => void;
+  onRemove: () => void;
+  onDrop: (e: React.DragEvent) => void;
+}) {
+  if (!card) return <TiltedSlot tilt={tilt} onClick={onClick} onDrop={onDrop} />;
+  return (
+    <div
+      onDragOver={(e) => e.preventDefault()}
+      onDrop={onDrop}
+      className={`${tilt} porcelain-card relative w-[clamp(238px,22.1vw,425px)] aspect-[400/252] rounded-[1.25rem] p-4 flex items-center justify-center shrink-0`}
+    >
+      <CardVisual card={card} variant="fill" />
+      <button
+        onClick={onRemove}
+        aria-label={`Remove ${card.name}`}
+        className="absolute top-2.5 right-2.5 z-10 grid place-items-center w-7 h-7 rounded-full bg-white/90 ring-1 ring-[var(--cl-hairline)] text-[var(--cl-muted)] hover:text-[var(--cl-ink)] transition-colors"
+      >
+        <X className="w-3.5 h-3.5" />
+      </button>
+    </div>
+  );
+}
+
+// The three-up value-prop strip beneath the slots.
+function CompareFeatures() {
+  const items = [
+    { Icon: LayoutGrid, title: 'Side-by-side comparison', sub: 'See key differences instantly' },
+    { Icon: Zap, title: 'Smarter decisions', sub: 'Compare what matters most' },
+    { Icon: PiggyBank, title: 'Save time & money', sub: 'Pick the card that pays you back' },
+  ];
+  return (
+    <div className="relative z-10 mt-6 shrink-0 max-w-4xl w-full mx-auto rounded-2xl border border-[var(--cl-hairline)] bg-white/70 backdrop-blur shadow-[0_20px_50px_-26px_rgba(18,20,40,0.22)] px-6 py-5 grid grid-cols-1 sm:grid-cols-3 gap-5">
+      {items.map(({ Icon, title, sub }) => (
+        <div key={title} className="flex items-center gap-3">
+          <span className="grid place-items-center w-11 h-11 rounded-full bg-[var(--cl-gold)]/12 text-[var(--cl-gold)] ring-1 ring-[var(--cl-gold)]/25 shrink-0">
+            <Icon className="w-5 h-5" />
+          </span>
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-[var(--cl-ink)] leading-tight">{title}</p>
+            <p className="text-xs text-[var(--cl-muted)] mt-0.5">{sub}</p>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// Sidebar "let AI pick for you" call-to-action, docked under the wallet rails.
+function StartCTA({ onFindClick }: { onFindClick?: () => void }) {
+  return (
+    <div className="mt-auto shrink-0 rounded-r-2xl border border-l-0 border-[var(--cl-hairline)] bg-[var(--cl-panel)]/50 p-4 flex flex-col gap-2.5">
+      <p className="text-sm font-semibold text-[var(--cl-ink)] leading-tight">Not sure where to start?</p>
+      <p className="text-xs text-[var(--cl-muted)] leading-relaxed">Let our AI find the perfect cards for you.</p>
+      <button
+        onClick={onFindClick}
+        className="mt-1 inline-flex items-center justify-center rounded-full bg-[var(--cl-ink)] text-[var(--cl-bg)] text-sm font-semibold px-4 py-2.5 hover:opacity-90 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cl-ink)]/30"
+      >
+        Find Me a Card
+      </button>
+    </div>
+  );
+}
+
 function TiltedSlot({ tilt, onClick, onDrop }: { tilt: string; onClick: () => void; onDrop: (e: React.DragEvent) => void }) {
   return (
     <button
@@ -295,7 +391,7 @@ function TiltedSlot({ tilt, onClick, onDrop }: { tilt: string; onClick: () => vo
       onDragOver={(e) => e.preventDefault()}
       onDrop={onDrop}
       aria-label="Select a card to compare"
-      className={`${tilt} hover:rotate-0 hover:rotate-y-0 w-[clamp(238px,22.1vw,425px)] aspect-[400/252] rounded-[1.25rem] border-2 border-dashed border-[var(--cl-hairline-strong)] flex flex-col items-center justify-center gap-2.5 xl:gap-4 text-[var(--cl-muted)] hover:text-[var(--cl-ink)] hover:border-[var(--cl-ink)]/50 transition-all duration-300 ease-out motion-reduce:transition-none shrink-0`}
+      className={`${tilt} porcelain-card hover:rotate-0 hover:rotate-y-0 w-[clamp(238px,22.1vw,425px)] aspect-[400/252] rounded-[1.25rem] flex flex-col items-center justify-center gap-2.5 xl:gap-4 text-[var(--cl-muted)] hover:text-[var(--cl-ink)] transition-all duration-300 ease-out motion-reduce:transition-none shrink-0`}
     >
       <Plus className="w-7 h-7 xl:w-10 xl:h-10" strokeWidth={1.25} />
       <span className="font-medium text-[var(--cl-ink)] xl:text-lg">Select a card</span>
@@ -325,7 +421,7 @@ function CompareColumn({
           onDragOver={(e) => e.preventDefault()}
           onDrop={onDrop}
           aria-label="Select a card to compare"
-          className="w-[320px] h-[202px] md:w-full md:h-full rounded-[1.25rem] border-2 border-dashed border-[var(--cl-hairline-strong)] flex flex-col items-center justify-center gap-2.5 text-[var(--cl-muted)] hover:text-[var(--cl-ink)] hover:border-[var(--cl-ink)]/50 transition-colors"
+          className="porcelain-card w-[320px] h-[202px] md:w-full md:h-full rounded-[1.25rem] flex flex-col items-center justify-center gap-2.5 text-[var(--cl-muted)] hover:text-[var(--cl-ink)] transition-colors"
         >
           <Plus className="w-7 h-7" strokeWidth={1.25} />
           <span className="font-medium text-[var(--cl-ink)]">Select a card</span>
@@ -548,7 +644,7 @@ function VerticalRail({
         aria-label={`Expand ${label}`}
         className="shrink-0 flex flex-row items-center justify-between gap-2 rounded-r-2xl border border-l-0 border-[var(--cl-hairline)] bg-[var(--cl-panel)]/40 pl-4 pr-2.5 py-3 text-[var(--cl-muted)] hover:text-[var(--cl-ink)] hover:bg-[var(--cl-panel)] transition-colors"
       >
-        <span className="text-[11px] font-semibold uppercase tracking-wider flex items-center gap-1.5">
+        <span className="text-[11px] font-semibold uppercase tracking-wider whitespace-nowrap flex items-center gap-1.5">
           <span className="text-[var(--cl-gold)]">{icon}</span> {label} ({known.length})
         </span>
         <ChevronDown className="w-4 h-4" />

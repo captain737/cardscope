@@ -145,24 +145,36 @@ export default function CardCarousel({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeCard?.id, showResults]);
 
-  // Landing hero: nothing but the search + filters, centered on the page.
+  // Landing hero: nothing but the search, centered on the page.
   if (!showResults) {
     return (
       <section className="compare-light relative w-full min-h-screen flex flex-col items-center justify-center px-6 sm:px-12 lg:px-24 bg-[var(--cl-bg)]">
         <div className="w-full max-w-4xl flex flex-col items-center gap-7 mt-6">
           <div className="text-center">
             <h1 className="font-display font-semibold text-4xl md:text-5xl text-[var(--cl-ink)] text-balance">Find what fits you best</h1>
-            <p className="mt-3 text-[var(--cl-muted)]">Describe your ideal card, or tap a filter to begin.</p>
+            <p className="mt-3 text-[var(--cl-muted)]">Describe your ideal card to begin.</p>
           </div>
           <AISearchBar
             submitOnly
             onQueryChange={() => {}}
             onFiltersParsed={setActiveFilters}
             onSubmit={() => setStarted(true)}
-          />
-          <BubbleFilters
-            activeFilters={activeFilters}
-            onFiltersChange={(f) => { setActiveFilters(f); setStarted(true); }}
+            leftSlot={
+              <div className="relative flex items-center">
+                <select
+                  value={providerFilter}
+                  onChange={(e) => setProviderFilter(e.target.value)}
+                  aria-label="Filter by card provider"
+                  className="appearance-none bg-transparent text-sm font-medium text-[var(--cl-ink)] pl-1 pr-6 py-1 focus:outline-none cursor-pointer max-w-[9rem] truncate"
+                >
+                  <option value="all">All providers</option>
+                  {providers.map((p) => (
+                    <option key={p} value={p}>{providerLabel(p)}</option>
+                  ))}
+                </select>
+                <ChevronDown className="w-4 h-4 absolute right-0 pointer-events-none text-[var(--cl-muted)]" />
+              </div>
+            }
           />
         </div>
       </section>
@@ -298,7 +310,7 @@ export default function CardCarousel({
       {/* Lower: card identity + headline facts. Fixed (fluid) height, content
           top-aligned, so the title starts at a constant vertical point and the
           search bar below always begins at the same place across cards. */}
-      <div aria-live="polite" className="relative z-20 w-full flex flex-col items-center gap-[clamp(0.75rem,2vh,1.25rem)] px-4 lg:h-[clamp(250px,29vh,320px)] lg:overflow-hidden">
+      <div aria-live="polite" className="relative z-20 w-full flex flex-col items-center gap-[clamp(0.75rem,2vh,1.25rem)] px-4 lg:min-h-[clamp(330px,37vh,430px)]">
         <AnimatePresence mode="wait">
           <motion.div
             key={activeCard.id}
@@ -310,7 +322,7 @@ export default function CardCarousel({
           >
             {/* Card name, centered. Watchlist / Visit actions live in the
                 carousel control row beneath the card. */}
-            <div className="w-full flex justify-center px-2">
+            <div className="w-full flex justify-center px-2 mt-[clamp(1rem,5vh,3rem)]">
               <div className="text-center">
                 <p className="font-display text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--cl-gold)] mb-1">{activeCard.issuer}</p>
                 <h1 className="font-display font-semibold text-[clamp(1.125rem,1.7vw,1.75rem)] leading-[1.1] text-[var(--cl-ink)] text-balance">{activeCard.name}</h1>

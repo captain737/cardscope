@@ -7,7 +7,7 @@ interface CardVisualProps {
   // 'fluid' scales the card with the viewport (used in the results carousel so
   // it fits every desktop size). 'default' is a fixed landscape face used where
   // the card is scaled by a transform (Compare thumbnails).
-  variant?: 'default' | 'fluid';
+  variant?: 'default' | 'fluid' | 'fill';
 }
 
 // Landscape card proportions (~1.586:1). Fluid variant is height-driven so the
@@ -15,6 +15,7 @@ interface CardVisualProps {
 const SIZE = {
   default: 'w-[360px] h-[228px] md:w-[420px] md:h-[266px]',
   fluid: 'h-[clamp(180px,23vh,300px)] aspect-[420/266]',
+  fill: 'w-full h-full',
 } as const;
 
 // Assets that aren't a flat card face. We rotate art 90° to stand it up in

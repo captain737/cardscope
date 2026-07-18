@@ -34,6 +34,43 @@
 html, body {
   background: oklch(0.99 0.003 80);
 }
+
+/* Nudge the whole UI's type down a little: dropping the root font size from
+   the 16px default scales every rem-based size (Tailwind text-*, spacing)
+   proportionally. Stacks on top of the .app-zoom density step. */
+html {
+  font-size: 15px;
+}
+
+/* Global density: the fluid layout is tuned a touch large at 100%, so scale
+   the content down once (equivalent to one browser zoom-out step). Applied to
+   the content wrapper — NOT :root — so the custom-cursor layer can live
+   outside it and keep pointer coordinates 1:1 (zoom offsets fixed children).
+   Users can still zoom further on top of this. */
+.app-zoom {
+  zoom: 0.9;
+}
+
+/* Polished white porcelain finish for the empty compare slots: a soft cool
+   gradient, a glossy top highlight, an inner bottom shade for curvature, and a
+   layered drop shadow that lifts the card off the page. */
+.porcelain-card {
+  background: linear-gradient(157deg, #ffffff 0%, #f5f6f8 52%, #eceef2 100%);
+  border: 1px solid rgba(20, 22, 30, 0.06);
+  box-shadow:
+    0 26px 50px -22px rgba(28, 30, 42, 0.30),
+    0 8px 16px -10px rgba(28, 30, 42, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.95),
+    inset 0 -18px 30px -22px rgba(40, 45, 60, 0.14);
+  transition: box-shadow 300ms ease, transform 300ms ease;
+}
+.porcelain-card:hover {
+  box-shadow:
+    0 34px 64px -22px rgba(28, 30, 42, 0.36),
+    0 10px 20px -10px rgba(28, 30, 42, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 1),
+    inset 0 -18px 30px -22px rgba(40, 45, 60, 0.14);
+}
 body {
   @apply text-ink antialiased overflow-x-hidden selection:bg-primary/30;
 }

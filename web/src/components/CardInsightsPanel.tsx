@@ -17,7 +17,7 @@ export default function CardInsightsPanel({ card, whyBullets }: { card: CreditCa
   // below. Foreign fee and Top perk share the last row (two columns).
   // Short (<100 char) glossary for the APR rows, surfaced via a hover tooltip.
   const APR_HINTS: Record<string, string> = {
-    Intro: 'A limited-time reduced interest rate for a set period after you open the card.',
+    Intro: 'A reduced interest rate for a set period after you open the card.',
     Regular: "The ongoing yearly interest rate charged on any balance you don't pay in full.",
   };
   const details: { label: string; value: string; hint?: string }[] = [

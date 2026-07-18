@@ -6,6 +6,9 @@ interface NavigationProps {
   setCurrentPage: (page: string) => void;
   findActive: boolean;
   onFindClick: () => void;
+  // Clicking the wordmark returns to the pristine landing (search + filters),
+  // not just the home route. Falls back to a plain home nav if unset.
+  onLogoClick?: () => void;
 }
 
 /**
@@ -13,7 +16,7 @@ interface NavigationProps {
  * top-right with the two pages plus a "Find Me a Card" action that opens
  * the bottom-sheet questionnaire (not a route).
  */
-export default function Navigation({ currentPage, setCurrentPage, findActive, onFindClick }: NavigationProps) {
+export default function Navigation({ currentPage, setCurrentPage, findActive, onFindClick, onLogoClick }: NavigationProps) {
   const links = [
     { id: 'home', label: 'Cards' },
     { id: 'compare', label: 'Compare' },
@@ -27,7 +30,7 @@ export default function Navigation({ currentPage, setCurrentPage, findActive, on
       className="fixed top-4 left-4 right-4 md:top-5 md:left-6 md:right-6 z-40 flex items-center justify-between pointer-events-none"
     >
       <button
-        onClick={() => setCurrentPage('home')}
+        onClick={onLogoClick ?? (() => setCurrentPage('home'))}
         className="pointer-events-auto flex items-center gap-2 group"
         aria-label="CardFit home"
       >

@@ -7,6 +7,7 @@ import Navigation from './components/Navigation';
 import CardCarousel from './components/CardCarousel';
 import FindMyCard from './components/FindMyCard';
 import Compare from './components/Compare';
+import CursorGlow from './components/CursorGlow';
 import { loadProfile, saveProfile } from './lib/profile';
 import { saveRemoteProfile } from './lib/remoteProfile';
 
@@ -30,6 +31,9 @@ export default function App() {
   // True right after Find Me a Card completes: the home page shows only
   // "Your best matches" (no filter bubbles) until the user browses all.
   const [matchMode, setMatchMode] = useState(false);
+  // Bumped to remount CardCarousel on a logo click, resetting its internal
+  // landing state (started flag, search text, provider, index).
+  const [homeResetKey, setHomeResetKey] = useState(0);
 
   // Restore a returning visitor's cards + filters on load.
   useEffect(() => {
@@ -65,18 +69,33 @@ export default function App() {
     setMatchAnswers(undefined);
   };
 
+  // Logo click: return to the pristine landing (just the search + filters).
+  // Clears the match/filter state and remounts CardCarousel so its internal
+  // landing state resets too.
+  const goHome = () => {
+    setCurrentPage('home');
+    browseAll();
+    setHomeResetKey((k) => k + 1);
+  };
+
   return (
-    <div className="compare-light min-h-screen bg-[var(--cl-bg)] text-[var(--cl-ink)] font-sans selection:bg-primary/30">
+    <>
+      {/* Cursor layer lives OUTSIDE .app-zoom so its fixed elements track the
+          real pointer 1:1 (a zoomed ancestor would scale their coordinates). */}
+      <CursorGlow />
+      <div className="app-zoom compare-light min-h-screen bg-[var(--cl-bg)] text-[var(--cl-ink)] font-sans selection:bg-primary/30">
       <Navigation
         currentPage={currentPage}
         setCurrentPage={setCurrentPage}
         findActive={findOpen}
         onFindClick={() => setFindOpen(true)}
+        onLogoClick={goHome}
       />
 
       <main>
         {currentPage === 'home' && (
           <CardCarousel
+            key={homeResetKey}
             watchlist={watchlist}
             setWatchlist={setWatchlist}
             filters={homeFilters}
@@ -93,6 +112,7 @@ export default function App() {
             setWatchlist={setWatchlist}
             ownedCards={ownedCards}
             setOwnedCards={setOwnedCards}
+            onFindClick={() => setFindOpen(true)}
           />
         )}
       </main>
@@ -102,6 +122,7 @@ export default function App() {
       </footer>
 
       <FindMyCard open={findOpen} onClose={() => setFindOpen(false)} onComplete={handleComplete} />
-    </div>
+      </div>
+    </>
   );
 }
