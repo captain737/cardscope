@@ -4,6 +4,7 @@ import { FILTERS, toggleFilter, FilterDef } from '../lib/filters';
 interface BubbleFiltersProps {
   activeFilters: string[];
   onFiltersChange?: (filters: string[]) => void;
+  desktopCompact?: boolean;
 }
 
 // Two tiers: the primary filters (account · reward · quality, incl. No Annual
@@ -27,7 +28,7 @@ const REQUIRED_GROUP_PROMPTS = [
   },
 ];
 
-export default function BubbleFilters({ activeFilters, onFiltersChange }: BubbleFiltersProps) {
+export default function BubbleFilters({ activeFilters, onFiltersChange, desktopCompact = false }: BubbleFiltersProps) {
   const handleToggle = (id: string) => onFiltersChange?.(toggleFilter(activeFilters, id));
   const missingPrompts = REQUIRED_GROUP_PROMPTS.filter((prompt) => !activeFilters.some((id) => prompt.ids.includes(id)));
 
@@ -41,7 +42,7 @@ export default function BubbleFilters({ activeFilters, onFiltersChange }: Bubble
         transition={{ duration: 0.25, delay: i * 0.015, ease: [0.16, 1, 0.3, 1] }}
         onClick={() => handleToggle(filter.id)}
         aria-pressed={isActive}
-        className={`${small ? 'px-3 py-1 text-xs' : 'px-3.5 py-1.5 text-sm'} font-medium rounded-full border shadow-[0_10px_24px_-22px_rgb(17_17_20_/_0.45),inset_0_1px_0_rgb(255_255_255_/_0.86)] transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cl-ink)]/30 ${
+        className={`${small ? 'px-3 py-1 text-xs' : 'px-3.5 py-1.5 text-sm'} ${desktopCompact ? 'md:px-2.5 md:py-0.5 md:text-[11px]' : ''} ${filter.id === 'rewards' ? 'md:min-w-[5.5rem]' : ''} font-medium rounded-full border shadow-[0_10px_24px_-22px_rgb(17_17_20_/_0.45),inset_0_1px_0_rgb(255_255_255_/_0.86)] transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cl-ink)]/30 ${
           isActive
             ? 'bg-[#111114] text-white border-[#111114]'
             : 'bg-white text-[var(--cl-muted)] border-[var(--cl-hairline-strong)] hover:bg-[var(--cl-panel)] hover:text-[var(--cl-ink)]'
@@ -55,7 +56,7 @@ export default function BubbleFilters({ activeFilters, onFiltersChange }: Bubble
   let i = 0;
 
   return (
-    <div className="w-full flex flex-col items-center gap-2.5 z-40 relative">
+    <div className={`w-full flex flex-col items-center z-40 relative ${desktopCompact ? 'gap-2 md:gap-1.5' : 'gap-2.5'}`}>
       {missingPrompts.length > 0 && (
         <p className="px-4 text-center text-[12px] font-medium text-[var(--cl-muted)]">
           {missingPrompts.map((prompt) => prompt.text).join(' | ')}
@@ -63,7 +64,7 @@ export default function BubbleFilters({ activeFilters, onFiltersChange }: Bubble
       )}
       {/* Primary filters: account · reward · quality. On desktop they sit on a
           single line (no wrap, no width cap); smaller screens wrap as needed. */}
-      <div className="max-w-3xl lg:max-w-none px-4 md:px-6 flex flex-wrap lg:flex-nowrap justify-center items-center gap-x-2 gap-y-2">
+      <div className={`max-w-3xl lg:max-w-none px-4 md:px-6 flex flex-wrap lg:flex-nowrap justify-center items-center ${desktopCompact ? 'gap-x-1.5 gap-y-1.5' : 'gap-x-2 gap-y-2'}`}>
         {UPPER_GROUPS.map((group, gi) => (
           <div key={group} className="contents">
             {gi > 0 && (
@@ -73,7 +74,7 @@ export default function BubbleFilters({ activeFilters, onFiltersChange }: Bubble
           </div>
         ))}
       </div>
-      <div className="max-w-3xl px-4 md:px-6 flex flex-wrap justify-center items-center gap-x-2 gap-y-2">
+      <div className={`max-w-3xl px-4 md:px-6 flex flex-wrap justify-center items-center ${desktopCompact ? 'gap-x-1.5 gap-y-1.5' : 'gap-x-2 gap-y-2'}`}>
         {SPEND_FILTERS.map((filter) => bubble(filter, i++, true))}
       </div>
     </div>

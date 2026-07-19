@@ -115,12 +115,12 @@ export default function AISearchBar({ onQueryChange, onFiltersParsed, onSubmit, 
   };
 
   return (
-    <div className={`relative w-full mx-auto ${compact ? 'max-w-[52rem]' : 'max-w-[62.5rem]'}`}>
+    <div className={`relative w-full mx-auto ${compact ? 'max-w-[52rem] md:max-w-[46rem]' : 'max-w-[62.5rem]'}`}>
       <div className={`flex items-center rounded-full bg-white border border-[var(--cl-hairline-strong)] shadow-[0_18px_42px_-30px_rgb(0_0_0_/_0.38)] focus-within:border-[var(--cl-ink)] transition-colors ${
-        compact ? 'gap-1 pl-3 pr-1.5 py-1.5 sm:pl-4 sm:pr-2' : 'gap-1.5 pl-4 pr-2 py-2 sm:pl-5 sm:pr-2.5 sm:py-2.5'
+        compact ? 'gap-1 pl-3 pr-1.5 py-1.5 sm:pl-4 sm:pr-2 md:py-1' : 'gap-1.5 pl-4 pr-2 py-2 sm:pl-5 sm:pr-2.5 sm:py-2.5'
       }`}>
         {leftSlot && (
-          <div className={`shrink-0 flex items-center border-r border-[var(--cl-hairline-strong)] ${compact ? 'pr-2 mr-1.5 sm:pr-3.5 sm:mr-2' : 'pr-3 mr-2 sm:pr-5 sm:mr-3'}`}>{leftSlot}</div>
+          <div className={`shrink-0 flex items-center border-r border-[var(--cl-hairline-strong)] ${compact ? 'pr-2 mr-1.5 sm:pr-3.5 sm:mr-2 md:pr-3 md:mr-1.5' : 'pr-3 mr-2 sm:pr-5 sm:mr-3'}`}>{leftSlot}</div>
         )}
         <input
           type="text"
@@ -130,7 +130,7 @@ export default function AISearchBar({ onQueryChange, onFiltersParsed, onSubmit, 
           placeholder={value ? '' : placeholder + (reducedMotion.current ? '' : '|')}
           aria-label="Describe the card you're looking for"
           className={`flex-1 min-w-0 bg-transparent border-none outline-none text-[var(--cl-ink)] placeholder-[var(--cl-muted)] ${
-            compact ? 'text-[12px] py-1 pl-0.5 sm:text-[13px]' : `text-[14px] py-1.5 sm:text-[15px] ${leftSlot ? 'pl-1' : 'pl-3'}`
+            compact ? 'text-[12px] py-1 pl-0.5 sm:text-[13px] md:text-[12px] md:py-0.5' : `text-[14px] py-1.5 sm:text-[15px] ${leftSlot ? 'pl-1' : 'pl-3'}`
           }`}
         />
         {value && (
@@ -146,7 +146,7 @@ export default function AISearchBar({ onQueryChange, onFiltersParsed, onSubmit, 
           onClick={submit}
           disabled={!value.trim()}
           aria-label="Match filters to my description"
-          className={`${compact ? 'w-8 h-8' : 'w-9 h-9 sm:w-10 sm:h-10'} rounded-full flex items-center justify-center shrink-0 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cl-ink)]/30 ${
+          className={`${compact ? 'w-8 h-8 md:w-7 md:h-7' : 'w-9 h-9 sm:w-10 sm:h-10'} rounded-full flex items-center justify-center shrink-0 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cl-ink)]/30 ${
             value.trim()
               ? 'bg-[var(--cl-pill)] text-[var(--cl-pill-ink)] hover:opacity-90'
               : 'bg-[var(--cl-hairline)] text-[var(--cl-muted)] cursor-default'
@@ -155,7 +155,7 @@ export default function AISearchBar({ onQueryChange, onFiltersParsed, onSubmit, 
           {parsing ? (
             <span className={`${compact ? 'w-3.5 h-3.5' : 'w-4 h-4'} rounded-full border-2 border-[var(--cl-pill-ink)]/30 border-t-[var(--cl-pill-ink)] animate-spin`} aria-hidden="true" />
           ) : (
-            <ArrowUp className={compact ? 'w-3.5 h-3.5' : 'w-4 h-4'} />
+            <ArrowUp className={compact ? 'w-3.5 h-3.5 md:w-3 md:h-3' : 'w-4 h-4'} />
           )}
         </button>
       </div>

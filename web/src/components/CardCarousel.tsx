@@ -472,19 +472,19 @@ export default function CardCarousel({
                     value={providerFilter}
                     onChange={(e) => setProviderFilter(e.target.value)}
                     aria-label="Filter by card provider"
-                    className="appearance-none bg-transparent text-[12px] text-[var(--cl-ink)] pl-1 pr-5 py-0.5 focus:outline-none cursor-pointer max-w-[8rem] truncate"
+                    className="appearance-none bg-transparent text-[11px] text-[var(--cl-ink)] pl-1 pr-4 py-0 focus:outline-none cursor-pointer max-w-[7rem] truncate"
                   >
                     <option value="all">All providers</option>
                     {providers.map((p) => (
                       <option key={p} value={p}>{providerLabel(p)}</option>
                     ))}
                   </select>
-                  <ChevronDown className="w-3.5 h-3.5 absolute right-0 pointer-events-none text-[var(--cl-muted)]" />
+                  <ChevronDown className="w-3 h-3 absolute right-0 pointer-events-none text-[var(--cl-muted)]" />
                 </div>
               }
             />
           </div>
-          <BubbleFilters activeFilters={activeFilters} onFiltersChange={setActiveFilters} />
+          <BubbleFilters activeFilters={activeFilters} onFiltersChange={setActiveFilters} desktopCompact />
         </div>
       )}
       </div>
