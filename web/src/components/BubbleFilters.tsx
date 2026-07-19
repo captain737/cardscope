@@ -10,9 +10,26 @@ interface BubbleFiltersProps {
 // Fee / Premium) on top, and the spend-category refinements (Dining, Groceries,
 // Gas, Balance Transfer) below as comparatively smaller bubbles.
 const UPPER_GROUPS: Array<FilterDef['group']> = ['account', 'reward', 'quality'];
+const ACCOUNT_IDS = FILTERS.filter((f) => f.group === 'account').map((f) => f.id);
+const SPEND_FILTERS = FILTERS.filter((f) => f.group === 'spend');
+const REQUIRED_GROUP_PROMPTS = [
+  {
+    ids: ACCOUNT_IDS,
+    text: 'Choose Personal, Business, or Student to refine results.',
+  },
+  {
+    ids: FILTERS.filter((f) => f.group === 'reward').map((f) => f.id),
+    text: 'Choose Rewards or Cash Back to refine results.',
+  },
+  {
+    ids: FILTERS.filter((f) => f.group === 'quality').map((f) => f.id),
+    text: 'Choose No Annual Fee or Premium to refine results.',
+  },
+];
 
 export default function BubbleFilters({ activeFilters, onFiltersChange }: BubbleFiltersProps) {
   const handleToggle = (id: string) => onFiltersChange?.(toggleFilter(activeFilters, id));
+  const missingPrompts = REQUIRED_GROUP_PROMPTS.filter((prompt) => !activeFilters.some((id) => prompt.ids.includes(id)));
 
   const bubble = (filter: FilterDef, i: number, small: boolean) => {
     const isActive = activeFilters.includes(filter.id);
@@ -24,10 +41,10 @@ export default function BubbleFilters({ activeFilters, onFiltersChange }: Bubble
         transition={{ duration: 0.25, delay: i * 0.015, ease: [0.16, 1, 0.3, 1] }}
         onClick={() => handleToggle(filter.id)}
         aria-pressed={isActive}
-        className={`${small ? 'px-3 py-1 text-xs' : 'px-3.5 py-1.5 text-sm'} font-medium rounded-full border transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cl-ink)]/30 ${
+        className={`${small ? 'px-3 py-1 text-xs' : 'px-3.5 py-1.5 text-sm'} font-medium rounded-full border shadow-[0_10px_24px_-22px_rgb(17_17_20_/_0.45),inset_0_1px_0_rgb(255_255_255_/_0.86)] transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cl-ink)]/30 ${
           isActive
-            ? 'bg-[var(--cl-pill)] text-[var(--cl-pill-ink)] border-[var(--cl-pill)]'
-            : 'bg-transparent text-[var(--cl-muted)] border-[var(--cl-hairline-strong)] hover:bg-[var(--cl-panel)] hover:text-[var(--cl-ink)]'
+            ? 'bg-[#111114] text-white border-[#111114]'
+            : 'bg-white text-[var(--cl-muted)] border-[var(--cl-hairline-strong)] hover:bg-[var(--cl-panel)] hover:text-[var(--cl-ink)]'
         }`}
       >
         {filter.label}
@@ -38,7 +55,12 @@ export default function BubbleFilters({ activeFilters, onFiltersChange }: Bubble
   let i = 0;
 
   return (
-    <div className="w-full flex flex-col items-center gap-2.5 z-20 relative">
+    <div className="w-full flex flex-col items-center gap-2.5 z-40 relative">
+      {missingPrompts.length > 0 && (
+        <p className="px-4 text-center text-[12px] font-medium text-[var(--cl-muted)]">
+          {missingPrompts.map((prompt) => prompt.text).join(' | ')}
+        </p>
+      )}
       {/* Primary filters: account · reward · quality. On desktop they sit on a
           single line (no wrap, no width cap); smaller screens wrap as needed. */}
       <div className="max-w-3xl lg:max-w-none px-4 md:px-6 flex flex-wrap lg:flex-nowrap justify-center items-center gap-x-2 gap-y-2">
@@ -50,6 +72,9 @@ export default function BubbleFilters({ activeFilters, onFiltersChange }: Bubble
             {FILTERS.filter((f) => f.group === group).map((filter) => bubble(filter, i++, false))}
           </div>
         ))}
+      </div>
+      <div className="max-w-3xl px-4 md:px-6 flex flex-wrap justify-center items-center gap-x-2 gap-y-2">
+        {SPEND_FILTERS.map((filter) => bubble(filter, i++, true))}
       </div>
     </div>
   );

@@ -1,13 +1,14 @@
 import { motion } from 'motion/react';
-import { Layers } from 'lucide-react';
+import { Menu } from 'lucide-react';
+import { useState } from 'react';
 
 interface NavigationProps {
   currentPage: string;
   setCurrentPage: (page: string) => void;
   findActive: boolean;
   onFindClick: () => void;
-  // Clicking the wordmark returns to the pristine landing (search + filters),
-  // not just the home route. Falls back to a plain home nav if unset.
+  // Clicking the wordmark returns to the Cards page. Falls back to a plain
+  // home nav if unset.
   onLogoClick?: () => void;
 }
 
@@ -17,36 +18,80 @@ interface NavigationProps {
  * the bottom-sheet questionnaire (not a route).
  */
 export default function Navigation({ currentPage, setCurrentPage, findActive, onFindClick, onLogoClick }: NavigationProps) {
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const links = [
     { id: 'home', label: 'Cards' },
     { id: 'compare', label: 'Compare' },
   ];
+  const goToPage = (page: string) => {
+    setCurrentPage(page);
+    setIsMenuOpen(false);
+  };
+  const openFind = () => {
+    onFindClick();
+    setIsMenuOpen(false);
+  };
 
   return (
     <motion.div
       initial={{ y: -12, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-      className="fixed top-4 left-4 right-4 md:top-5 md:left-6 md:right-6 z-40 flex items-center justify-between pointer-events-none"
+      className="fixed top-4 left-4 right-4 md:top-6 md:left-7 md:right-7 z-40 flex flex-col items-stretch gap-3 pointer-events-none sm:flex-row sm:items-center sm:justify-between"
     >
-      <button
-        onClick={onLogoClick ?? (() => setCurrentPage('home'))}
-        className="pointer-events-auto flex items-center gap-2 group"
-        aria-label="CardFit home"
-      >
-        <Layers className="w-5 h-5 text-primary transition-transform duration-300 group-hover:scale-110" />
-        <span className="font-display font-bold text-lg tracking-tight text-primary">CardFit</span>
-      </button>
+      <div className="flex items-center justify-between sm:contents">
+        <button
+          onClick={onLogoClick ?? (() => setCurrentPage('home'))}
+          className="pointer-events-auto flex items-center gap-2.5 group"
+          aria-label="CardFit home"
+        >
+          <span className="font-display font-semibold text-[25px] tracking-normal text-black sm:text-[21px]">CardFit</span>
+        </button>
+        <button
+          type="button"
+          aria-label="Menu"
+          onClick={() => setIsMenuOpen((open) => !open)}
+          className="pointer-events-auto grid h-10 w-10 place-items-center text-black sm:hidden"
+        >
+          <Menu className="h-8 w-8" strokeWidth={2.2} />
+        </button>
+      </div>
 
-      <nav className="pointer-events-auto flex items-center gap-1 p-1 rounded-full bg-surface/90 backdrop-blur-sm border border-border">
+      {isMenuOpen && (
+        <div className="pointer-events-auto flex flex-col gap-1 rounded-[1.1rem] border border-[var(--cl-hairline-strong)] bg-white p-1.5 shadow-[0_22px_54px_-34px_rgb(0_0_0_/_0.45)] sm:hidden">
+          {links.map((link) => (
+            <button
+              key={link.id}
+              onClick={() => goToPage(link.id)}
+              className={`h-10 rounded-[0.85rem] px-4 text-left text-[14px] font-medium transition-colors ${
+                currentPage === link.id
+                  ? `bg-[var(--cl-pill)] ${link.id === 'compare' ? 'text-[var(--compare-orange,#767676)]' : 'text-[var(--cl-pill-ink)]'}`
+                  : 'text-[var(--cl-ink)] hover:bg-[#F5F5F5]'
+              }`}
+            >
+              {link.label}
+            </button>
+          ))}
+          <button
+            onClick={openFind}
+            className={`h-10 rounded-[0.85rem] px-4 text-left text-[14px] font-medium transition-colors ${
+              findActive ? 'bg-[var(--cl-pill)] text-[var(--cl-pill-ink)]' : 'text-[var(--cl-ink)] hover:bg-[#F5F5F5]'
+            }`}
+          >
+            Find Me a Card
+          </button>
+        </div>
+      )}
+
+      <nav className="pointer-events-auto hidden h-[48px] w-auto items-center gap-1 rounded-full border border-[var(--cl-hairline-strong)] bg-white p-1 shadow-[0_10px_28px_-24px_rgb(0_0_0_/_0.55)] sm:flex">
         {links.map(link => (
           <button
             key={link.id}
             onClick={() => setCurrentPage(link.id)}
-            className={`px-3.5 py-1.5 rounded-full text-sm font-medium transition-colors duration-200 ${
+            className={`h-[38px] min-w-[100px] flex-none rounded-full px-4 text-[13px] font-medium transition-colors duration-200 ${
               currentPage === link.id
-                ? 'bg-primary text-bg'
-                : 'text-muted hover:text-ink hover:bg-surface-raised'
+                ? `bg-[var(--cl-pill)] ${link.id === 'compare' ? 'text-[var(--compare-orange,#767676)]' : 'text-[var(--cl-pill-ink)]'} shadow-[inset_0_1px_0_rgb(255_255_255_/_0.18)]`
+                : 'text-[var(--cl-ink)] hover:text-black hover:bg-[#F5F5F5]'
             }`}
           >
             {link.label}
@@ -54,8 +99,8 @@ export default function Navigation({ currentPage, setCurrentPage, findActive, on
         ))}
         <button
           onClick={onFindClick}
-          className={`px-3.5 py-1.5 rounded-full text-sm font-medium transition-colors duration-200 ${
-            findActive ? 'bg-primary text-bg' : 'text-muted hover:text-ink hover:bg-surface-raised'
+          className={`h-[38px] min-w-[136px] flex-none rounded-full px-4 text-[13px] font-medium transition-colors duration-200 ${
+            findActive ? 'bg-[var(--cl-pill)] text-[var(--cl-pill-ink)]' : 'text-[var(--cl-ink)] hover:text-black hover:bg-[#F5F5F5]'
           }`}
         >
           Find Me a Card

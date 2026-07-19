@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 import { useEffect, useState } from 'react';
+import { Analytics } from '@vercel/analytics/react';
 import Navigation from './components/Navigation';
 import CardCarousel from './components/CardCarousel';
 import FindMyCard from './components/FindMyCard';
@@ -19,8 +20,20 @@ export interface MatchResult {
   answers?: Record<string, unknown>;
 }
 
+function isFirstTimeProfile() {
+  const p = loadProfile();
+  return !(
+    p.hasSeenCardsIntro ||
+    p.name ||
+    p.email ||
+    p.ownedCards?.length ||
+    p.filters?.length ||
+    p.answers
+  );
+}
+
 export default function App() {
-  const [currentPage, setCurrentPage] = useState('home');
+  const [currentPage, setCurrentPage] = useState(() => (window.location.pathname === '/compare' ? 'compare' : 'home'));
   const [watchlist, setWatchlist] = useState<string[]>([]);
   // Cards the user told us they already hold (via Find Me a Card). Kept
   // separate from the general watchlist and shown apart on Compare.
@@ -32,8 +45,9 @@ export default function App() {
   // "Your best matches" (no filter bubbles) until the user browses all.
   const [matchMode, setMatchMode] = useState(false);
   // Bumped to remount CardCarousel on a logo click, resetting its internal
-  // landing state (started flag, search text, provider, index).
+  // search text, provider, and index while opening the full cards view.
   const [homeResetKey, setHomeResetKey] = useState(0);
+  const [isFirstTime, setIsFirstTime] = useState(isFirstTimeProfile);
 
   // Restore a returning visitor's cards + filters on load.
   useEffect(() => {
@@ -41,6 +55,20 @@ export default function App() {
     if (p.ownedCards?.length) setOwnedCards(p.ownedCards);
     if (p.filters?.length) setHomeFilters(p.filters);
   }, []);
+
+  useEffect(() => {
+    const handlePopState = () => {
+      setCurrentPage(window.location.pathname === '/compare' ? 'compare' : 'home');
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  const navigatePage = (page: string) => {
+    setCurrentPage(page);
+    const path = page === 'compare' ? '/compare' : '/';
+    if (window.location.pathname !== path) window.history.pushState(null, '', path);
+  };
 
   const handleComplete = (r: MatchResult) => {
     setHomeFilters(r.filters);
@@ -53,8 +81,10 @@ export default function App() {
       ownedCards: r.ownedCards,
       filters: r.filters,
       answers: r.answers,
+      hasSeenCardsIntro: true,
     };
     saveProfile(profile);
+    setIsFirstTime(false);
     // Also persist to Supabase (keyed by email) for cross-device recall.
     // Fire-and-forget: localStorage already has it if this fails.
     void saveRemoteProfile(profile);
@@ -69,24 +99,27 @@ export default function App() {
     setMatchAnswers(undefined);
   };
 
-  // Logo click: return to the pristine landing (just the search + filters).
-  // Clears the match/filter state and remounts CardCarousel so its internal
-  // landing state resets too.
+  // Logo click: return to the full Cards page with card details visible.
+  // Clears match/filter state and remounts CardCarousel so its internal
+  // search/provider/index state resets too.
   const goHome = () => {
-    setCurrentPage('home');
+    navigatePage('home');
     browseAll();
     setHomeResetKey((k) => k + 1);
   };
 
+  const completeCardsIntro = () => {
+    saveProfile({ hasSeenCardsIntro: true });
+    setIsFirstTime(false);
+  };
+
   return (
     <>
-      {/* Cursor layer lives OUTSIDE .app-zoom so its fixed elements track the
-          real pointer 1:1 (a zoomed ancestor would scale their coordinates). */}
       <CursorGlow />
-      <div className="app-zoom compare-light min-h-screen bg-[var(--cl-bg)] text-[var(--cl-ink)] font-sans selection:bg-primary/30">
+      <div className="compare-light min-h-screen bg-[var(--cl-bg)] text-[var(--cl-ink)] font-sans selection:bg-primary/30">
       <Navigation
         currentPage={currentPage}
-        setCurrentPage={setCurrentPage}
+        setCurrentPage={navigatePage}
         findActive={findOpen}
         onFindClick={() => setFindOpen(true)}
         onLogoClick={goHome}
@@ -104,6 +137,8 @@ export default function App() {
             matchMode={matchMode}
             matchAnswers={matchAnswers}
             onBrowseAll={browseAll}
+            startWithResults={!isFirstTime}
+            onIntroComplete={completeCardsIntro}
           />
         )}
         {currentPage === 'compare' && (
@@ -112,7 +147,6 @@ export default function App() {
             setWatchlist={setWatchlist}
             ownedCards={ownedCards}
             setOwnedCards={setOwnedCards}
-            onFindClick={() => setFindOpen(true)}
           />
         )}
       </main>
@@ -123,6 +157,7 @@ export default function App() {
 
       <FindMyCard open={findOpen} onClose={() => setFindOpen(false)} onComplete={handleComplete} />
       </div>
+      <Analytics />
     </>
   );
 }

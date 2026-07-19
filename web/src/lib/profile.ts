@@ -10,6 +10,7 @@ export interface StoredProfile {
   ownedCards?: string[];
   filters?: string[];
   answers?: Record<string, unknown>;
+  hasSeenCardsIntro?: boolean;
 }
 
 const KEY = 'cardscope.profile.v1';

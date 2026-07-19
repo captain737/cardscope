@@ -24,7 +24,7 @@ export const MOCK_CARDS: CreditCard[] = [
     name: 'Neon Miles',
     issuer: 'NEXUS',
     last4: '8831',
-    gradient: 'bg-gradient-to-br from-indigo-500 via-purple-600 to-fuchsia-600',
+    gradient: 'bg-gradient-to-br from-neutral-400 via-neutral-600 to-neutral-800',
     tags: ['travel', 'personal', 'dining'],
     facts: {
       annualFee: '$95',
@@ -42,7 +42,7 @@ export const MOCK_CARDS: CreditCard[] = [
     name: 'Orbit Rewards',
     issuer: 'ORBIT',
     last4: '2119',
-    gradient: 'bg-gradient-to-br from-cyan-400 via-blue-500 to-blue-700',
+    gradient: 'bg-gradient-to-br from-zinc-300 via-zinc-500 to-zinc-700',
     tags: ['no-fee', 'low-apr', 'personal', 'beginner'],
     facts: {
       annualFee: '$0',
@@ -60,7 +60,7 @@ export const MOCK_CARDS: CreditCard[] = [
     name: 'Velvet Cash',
     issuer: 'AURA',
     last4: '5501',
-    gradient: 'bg-gradient-to-br from-rose-400 via-red-500 to-rose-700',
+    gradient: 'bg-gradient-to-br from-stone-300 via-stone-500 to-stone-700',
     tags: ['cashback', 'no-fee', 'personal', 'groceries', 'gas'],
     facts: {
       annualFee: '$0',
@@ -96,7 +96,7 @@ export const MOCK_CARDS: CreditCard[] = [
     name: 'Aurora Travel',
     issuer: 'AURORA',
     last4: '3024',
-    gradient: 'bg-gradient-to-br from-emerald-400 via-teal-500 to-cyan-600',
+    gradient: 'bg-gradient-to-br from-neutral-300 via-neutral-500 to-neutral-700',
     tags: ['travel', 'groceries', 'gas', 'hotels'],
     facts: {
       annualFee: '$95',
@@ -114,7 +114,7 @@ export const MOCK_CARDS: CreditCard[] = [
     name: 'Zenith Gold',
     issuer: 'ZENITH',
     last4: '1102',
-    gradient: 'bg-gradient-to-br from-amber-300 via-yellow-500 to-orange-600',
+    gradient: 'bg-gradient-to-br from-zinc-200 via-zinc-400 to-zinc-700',
     tags: ['dining', 'groceries', 'personal'],
     facts: {
       annualFee: '$250',
@@ -132,7 +132,7 @@ export const MOCK_CARDS: CreditCard[] = [
     name: 'Apex Pro',
     issuer: 'APEX',
     last4: '8812',
-    gradient: 'bg-gradient-to-br from-sky-500 via-indigo-600 to-blue-800',
+    gradient: 'bg-gradient-to-br from-slate-300 via-slate-500 to-slate-800',
     tags: ['business', 'cashback', 'gas'],
     facts: {
       annualFee: '$95',
@@ -150,7 +150,7 @@ export const MOCK_CARDS: CreditCard[] = [
     name: 'Pulse Student',
     issuer: 'PULSE',
     last4: '4450',
-    gradient: 'bg-gradient-to-br from-lime-400 via-green-500 to-emerald-600',
+    gradient: 'bg-gradient-to-br from-neutral-200 via-neutral-500 to-neutral-700',
     tags: ['students', 'no-fee', 'beginner', 'dining'],
     facts: {
       annualFee: '$0',
@@ -168,7 +168,7 @@ export const MOCK_CARDS: CreditCard[] = [
     name: 'Nova Transfer',
     issuer: 'NOVA',
     last4: '7721',
-    gradient: 'bg-gradient-to-br from-purple-400 via-pink-500 to-rose-600',
+    gradient: 'bg-gradient-to-br from-stone-200 via-stone-500 to-stone-700',
     tags: ['balance', 'low-apr', 'no-fee', 'personal'],
     facts: {
       annualFee: '$0',
@@ -186,7 +186,7 @@ export const MOCK_CARDS: CreditCard[] = [
     name: 'Horizon Blue',
     issuer: 'HORIZON',
     last4: '2901',
-    gradient: 'bg-gradient-to-br from-blue-300 via-cyan-500 to-teal-500',
+    gradient: 'bg-gradient-to-br from-zinc-200 via-zinc-400 to-zinc-600',
     tags: ['travel', 'no-fee', 'beginner'],
     facts: {
       annualFee: '$0',
@@ -222,7 +222,7 @@ export const MOCK_CARDS: CreditCard[] = [
     name: 'Echo Everyday',
     issuer: 'ECHO',
     last4: '3349',
-    gradient: 'bg-gradient-to-br from-orange-400 via-red-500 to-pink-600',
+    gradient: 'bg-gradient-to-br from-neutral-300 via-neutral-500 to-neutral-800',
     tags: ['cashback', 'groceries', 'gas', 'no-fee'],
     facts: {
       annualFee: '$0',
@@ -240,7 +240,7 @@ export const MOCK_CARDS: CreditCard[] = [
     name: 'Stellar Nights',
     issuer: 'STELLAR',
     last4: '9902',
-    gradient: 'bg-gradient-to-br from-violet-500 via-purple-700 to-indigo-900',
+    gradient: 'bg-gradient-to-br from-slate-300 via-slate-600 to-slate-900',
     tags: ['hotels', 'travel', 'personal'],
     facts: {
       annualFee: '$95',
@@ -258,7 +258,7 @@ export const MOCK_CARDS: CreditCard[] = [
     name: 'Vanguard Start',
     issuer: 'VANGUARD',
     last4: '1004',
-    gradient: 'bg-gradient-to-br from-teal-300 via-green-400 to-emerald-500',
+    gradient: 'bg-gradient-to-br from-stone-200 via-stone-400 to-stone-600',
     tags: ['beginner', 'no-fee', 'personal'],
     facts: {
       annualFee: '$0',

@@ -1,4 +1,4 @@
-import { Check } from 'lucide-react';
+import { BarChart3, Check, Clock3, Gift, Globe2, Info, Percent, Star } from 'lucide-react';
 import { CreditCard } from '../types';
 import { cardInsights } from '../lib/insights';
 import { aprSections } from '../lib/apr';
@@ -25,29 +25,42 @@ export default function CardInsightsPanel({ card, whyBullets }: { card: CreditCa
     { label: 'Foreign fee', value: card.facts.foreignFee },
     { label: 'Top perk', value: topPerkDisplay(card.facts) },
   ];
+  const iconFor = (label: string) => {
+    if (label.includes('Intro')) return <Clock3 className="h-5 w-5" strokeWidth={1.7} />;
+    if (label.includes('Regular')) return <Percent className="h-5 w-5" strokeWidth={1.7} />;
+    if (label.includes('Foreign')) return <Globe2 className="h-5 w-5" strokeWidth={1.7} />;
+    if (label.includes('Top')) return <Star className="h-5 w-5" strokeWidth={1.7} />;
+    return <Gift className="h-5 w-5" strokeWidth={1.7} />;
+  };
 
   return (
-    <div className="w-full text-left flex flex-col gap-[clamp(0.9rem,2.2vh,1.9rem)] pr-1">
-      <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-[clamp(0.9rem,1.8vh,1.35rem)]">
-        {details.map((d) => (
-          <div key={d.label} className="flex flex-col gap-1.5">
-            <dt className="font-display text-[10.5px] font-semibold uppercase tracking-[0.1em] text-[var(--cl-muted)]">
-              {d.label}{d.hint && <InfoStar text={d.hint} />}
-            </dt>
-            <dd className="text-[15px] font-medium text-[var(--cl-ink)] leading-snug [overflow-wrap:anywhere]">{d.value}</dd>
+    <div className="w-full text-left flex flex-col pr-1">
+      <dl className="mobile-insights-grid grid grid-cols-1 sm:grid-cols-2">
+        {details.map((d, index) => (
+          <div
+            key={d.label}
+            className={`mobile-insight-cell min-h-[4.35rem] flex gap-3 ${index % 2 === 0 ? 'sm:pr-8' : 'sm:pl-8 sm:border-l'} ${index > 1 ? 'pt-1.5' : ''} border-[var(--cl-hairline-strong)]`}
+          >
+            <span className="mobile-insight-icon hidden shrink-0 text-[var(--cl-muted)]">{iconFor(d.label)}</span>
+            <div className="min-w-0">
+              <dt className="font-display text-[10px] font-medium uppercase tracking-[0.15em] text-[var(--cl-muted)]">
+                {d.label}{d.hint && <InfoStar text={d.hint} />}
+              </dt>
+              <dd className="mt-1.5 text-[12px] text-black leading-snug [overflow-wrap:anywhere]">{d.value}</dd>
+            </div>
           </div>
         ))}
       </dl>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 border-t border-[var(--cl-hairline)] pt-[clamp(0.85rem,2vh,1.75rem)]">
-        <Section title="Approval difficulty"><p className="text-[15px] text-[var(--cl-ink)] leading-relaxed">{ins.approval.label}</p></Section>
-        <Section title="Redemption options"><p className="text-[15px] text-[var(--cl-ink)] leading-relaxed">{ins.redemption.join(' · ')}</p></Section>
+      <div className="mt-3.5 grid grid-cols-1 sm:grid-cols-2 border-t border-[var(--cl-hairline-strong)] pt-4">
+        <Section title="Approval difficulty" className="sm:pr-8" icon={<BarChart3 className="h-5 w-5" strokeWidth={1.7} />}><p className="text-[12px] text-[var(--cl-ink)] leading-relaxed">{ins.approval.label}</p></Section>
+        <Section title="Redemption options" className="sm:pl-8 sm:border-l border-[var(--cl-hairline-strong)]" icon={<Gift className="h-5 w-5" strokeWidth={1.7} />}><p className="text-[12px] text-[var(--cl-ink)] leading-relaxed">{ins.redemption.join('  ·  ')}</p></Section>
       </div>
 
       <Section title={personalized ? 'Fits you because' : 'Best for'} divided>
-        <ul className={personalized ? 'flex flex-col gap-2' : 'grid grid-cols-1 sm:grid-cols-3 gap-x-6 gap-y-2.5'}>
+        <ul className={personalized ? 'flex flex-col gap-2' : 'grid grid-cols-1 sm:grid-cols-3 gap-x-8 gap-y-2.5'}>
           {(personalized ? whyBullets! : ins.bestFor.slice(0, 3)).map((it, i) => (
-            <li key={i} className="flex items-start gap-2 min-w-0 text-[15px] text-[var(--cl-ink)] leading-snug">
+            <li key={i} className="flex items-start gap-2 min-w-0 text-[12px] text-[var(--cl-ink)] leading-snug">
               <Check className="w-4 h-4 mt-[0.15em] shrink-0 text-[var(--cl-gold)]" strokeWidth={2.5} />
               <span>{it}</span>
             </li>
@@ -65,13 +78,13 @@ function InfoStar({ text }: { text: string }) {
       <button
         type="button"
         aria-label={text}
-        className="ml-0.5 text-[var(--cl-gold)] cursor-help rounded-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cl-gold)]/40"
+        className="ml-1 inline-flex h-3.5 w-3.5 items-center justify-center rounded-full text-[var(--cl-muted)] cursor-help focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cl-gold)]/40"
       >
-        *
+        <Info className="h-3.5 w-3.5" strokeWidth={1.7} />
       </button>
       <span
         role="tooltip"
-        className="pointer-events-none absolute bottom-full left-1/2 z-30 mb-1.5 w-max max-w-[14rem] -translate-x-1/2 rounded-lg bg-[var(--cl-ink)] px-2.5 py-1.5 text-[11px] font-medium normal-case leading-snug tracking-normal text-[var(--cl-bg)] opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100"
+        className="pointer-events-none absolute bottom-full left-1/2 z-30 mb-1.5 w-max max-w-[14rem] -translate-x-1/2 rounded-lg bg-[var(--cl-ink)] px-2.5 py-1.5 text-[11px] normal-case leading-snug tracking-normal text-[var(--cl-bg)] opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100"
       >
         {text}
       </span>
@@ -79,11 +92,14 @@ function InfoStar({ text }: { text: string }) {
   );
 }
 
-function Section({ title, children, divided }: { title: string; children: React.ReactNode; divided?: boolean }) {
+function Section({ title, children, divided, className = '', icon }: { title: string; children: React.ReactNode; divided?: boolean; className?: string; icon?: React.ReactNode }) {
   return (
-    <div className={divided ? 'border-t border-[var(--cl-hairline)] pt-[clamp(0.85rem,2vh,1.75rem)]' : undefined}>
-      <p className="font-display text-[11px] font-semibold uppercase tracking-[0.11em] text-[var(--cl-muted)] mb-3">{title}</p>
-      {children}
+    <div className={`mobile-section ${divided ? 'mt-3.5 border-t border-[var(--cl-hairline-strong)] pt-4' : ''} ${className}`}>
+      <span className="mobile-insight-icon hidden shrink-0 text-[var(--cl-muted)]">{icon}</span>
+      <div className="min-w-0">
+        <p className="font-display text-[10px] font-medium uppercase tracking-[0.15em] text-[var(--cl-muted)] mb-2">{title}</p>
+        {children}
+      </div>
     </div>
   );
 }

@@ -26,25 +26,24 @@ export interface CardRow {
 
 // Physical card gradients cards are assigned from, keyed by a hash of the
 // issuer name so the same issuer always renders the same way across
-// cards/loads. This is the one place per-card color variety lives — see
-// DESIGN.md: the card art keeps its own identity, the surrounding UI
-// chrome does not.
+// cards/loads. Real fetched card art keeps issuer identity; placeholders now
+// stay neutral with the rest of the interface.
 const PALETTE: string[] = [
   'bg-gradient-to-br from-neutral-800 via-neutral-900 to-black',
-  'bg-gradient-to-br from-indigo-500 via-purple-600 to-fuchsia-600',
-  'bg-gradient-to-br from-cyan-400 via-blue-500 to-blue-700',
-  'bg-gradient-to-br from-rose-400 via-red-500 to-rose-700',
+  'bg-gradient-to-br from-neutral-400 via-neutral-600 to-neutral-800',
+  'bg-gradient-to-br from-zinc-300 via-zinc-500 to-zinc-700',
+  'bg-gradient-to-br from-stone-300 via-stone-500 to-stone-700',
   'bg-gradient-to-br from-slate-300 via-slate-400 to-slate-600',
-  'bg-gradient-to-br from-emerald-400 via-teal-500 to-cyan-600',
-  'bg-gradient-to-br from-amber-300 via-yellow-500 to-orange-600',
-  'bg-gradient-to-br from-sky-500 via-indigo-600 to-blue-800',
-  'bg-gradient-to-br from-lime-400 via-green-500 to-emerald-600',
-  'bg-gradient-to-br from-purple-400 via-pink-500 to-rose-600',
-  'bg-gradient-to-br from-blue-300 via-cyan-500 to-teal-500',
+  'bg-gradient-to-br from-neutral-300 via-neutral-500 to-neutral-700',
+  'bg-gradient-to-br from-zinc-200 via-zinc-400 to-zinc-700',
+  'bg-gradient-to-br from-slate-300 via-slate-500 to-slate-800',
+  'bg-gradient-to-br from-neutral-200 via-neutral-500 to-neutral-700',
+  'bg-gradient-to-br from-stone-200 via-stone-500 to-stone-700',
+  'bg-gradient-to-br from-zinc-200 via-zinc-400 to-zinc-600',
   'bg-gradient-to-br from-gray-300 via-gray-500 to-gray-700',
-  'bg-gradient-to-br from-orange-400 via-red-500 to-pink-600',
-  'bg-gradient-to-br from-violet-500 via-purple-700 to-indigo-900',
-  'bg-gradient-to-br from-teal-300 via-green-400 to-emerald-500',
+  'bg-gradient-to-br from-neutral-300 via-neutral-500 to-neutral-800',
+  'bg-gradient-to-br from-slate-300 via-slate-600 to-slate-900',
+  'bg-gradient-to-br from-stone-200 via-stone-400 to-stone-600',
 ];
 
 function hashString(text: string): number {

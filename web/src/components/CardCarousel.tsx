@@ -23,6 +23,8 @@ const PROVIDER_LABELS: Record<string, string> = {
 const providerLabel = (p: string) =>
   PROVIDER_LABELS[p] ?? p.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 
+const FEATURED_CARD_NAME = 'Costco Anywhere Visa® Card by Citi';
+
 interface CardCarouselProps {
   watchlist: string[];
   setWatchlist: React.Dispatch<React.SetStateAction<string[]>>;
@@ -32,12 +34,14 @@ interface CardCarouselProps {
   matchMode: boolean;
   matchAnswers?: Record<string, unknown>;
   onBrowseAll: () => void;
+  startWithResults?: boolean;
+  onIntroComplete?: () => void;
 }
 
 export default function CardCarousel({
   watchlist, setWatchlist,
   filters: activeFilters, setFilters: setActiveFilters,
-  ownedCards, matchMode, matchAnswers, onBrowseAll,
+  ownedCards, matchMode, matchAnswers, onBrowseAll, startWithResults = false, onIntroComplete,
 }: CardCarouselProps) {
   const { cards: allCards } = useCards();
   const [cards, setCards] = useState<CreditCard[]>(allCards);
@@ -50,7 +54,7 @@ export default function CardCarousel({
   const [providerFilter, setProviderFilter] = useState('all');
   // Landing state: on first load show only the centered search + filters; the
   // deck appears once the user searches or picks a filter.
-  const [started, setStarted] = useState(false);
+  const [started, setStarted] = useState(startWithResults);
   const reducedMotion = useReducedMotion();
 
   // Distinct providers present in the deck, for the filter dropdown.
@@ -64,7 +68,11 @@ export default function CardCarousel({
   useEffect(() => {
     const pool = providerFilter === 'all' ? allCards : allCards.filter((c) => c.provider === providerFilter);
     const result = buildDeck(pool, activeFilters, ownedCards, matchMode, matchAnswers);
-    setCards(result.deck);
+    const featured = pool.find((card) => card.name.includes(FEATURED_CARD_NAME));
+    const deck = (!matchMode && activeFilters.length === 0 && providerFilter === 'all' && featured)
+      ? [featured, ...result.deck.filter((card) => card.id !== featured.id)]
+      : result.deck;
+    setCards(deck);
     setRanked(result.ranked);
     setComplement(result.complement);
     setAboveLimit(result.aboveAnnualFeeLimit?.map((r) => r.card) || []);
@@ -101,9 +109,9 @@ export default function CardCarousel({
   const rankLabel = filterDetail
     ? `best choice for ${filterDetail}`
     : complement ? 'best choice for you' : 'best match';
-  // Results appear once the user has expressed intent — a match, a filter, or
-  // a search. Otherwise the page shows just the centered search + filters.
-  const showResults = matchMode || started || activeFilters.length > 0;
+  // Results appear only after an explicit submit (Enter / arrow) or a Find Me
+  // a Card match. Landing filters can be staged without navigating away.
+  const showResults = matchMode || started;
   // Show the tailored reasoning only in match mode (Find Me a Card results).
   // Rendered as "Fits you because" in the insights panel, not under the name.
   const activeWhy = matchMode && activeCard ? explanations[activeCard.id] : undefined;
@@ -158,14 +166,23 @@ export default function CardCarousel({
             submitOnly
             onQueryChange={() => {}}
             onFiltersParsed={setActiveFilters}
-            onSubmit={() => setStarted(true)}
+            examples={[
+              'cashback cards with no annual fee for students',
+              'rewards travel card under $300',
+              'business card with gas rewards',
+              'premium dining card with no foreign fees',
+            ]}
+            onSubmit={() => {
+              setStarted(true);
+              onIntroComplete?.();
+            }}
             leftSlot={
               <div className="relative flex items-center">
                 <select
                   value={providerFilter}
                   onChange={(e) => setProviderFilter(e.target.value)}
                   aria-label="Filter by card provider"
-                  className="appearance-none bg-transparent text-sm font-medium text-[var(--cl-ink)] pl-1 pr-6 py-1 focus:outline-none cursor-pointer max-w-[9rem] truncate"
+                  className="appearance-none bg-transparent text-sm text-[var(--cl-ink)] pl-1 pr-6 py-1 focus:outline-none cursor-pointer max-w-[9rem] truncate"
                 >
                   <option value="all">All providers</option>
                   {providers.map((p) => (
@@ -182,13 +199,13 @@ export default function CardCarousel({
   }
 
   return (
-    <section className="compare-light relative w-full min-h-screen pt-[clamp(4.25rem,7vh,6.5rem)] pb-[clamp(1.25rem,3vh,2.5rem)] flex flex-col items-center bg-[var(--cl-bg)]">
+    <section className="compare-light cards-page relative w-full min-h-screen pt-[7.6rem] pb-8 flex flex-col items-center bg-[var(--cl-bg)] md:pt-[clamp(4.25rem,7vh,6.1rem)] md:pb-[clamp(12rem,24vh,15.5rem)]">
       {matchMode && (
-        <div className="relative z-20 w-full flex flex-wrap items-center justify-center gap-x-3 gap-y-1 px-4 text-center mb-2">
+        <div className="relative z-20 w-full flex flex-wrap items-center justify-center gap-x-3 gap-y-1 px-4 text-center mb-8 md:mb-10">
           <h2 className="font-display font-semibold text-3xl md:text-4xl text-[var(--cl-ink)]">Your best matches</h2>
           <button
             onClick={() => { setStarted(true); onBrowseAll(); }}
-            className="shrink-0 h-7 px-3 rounded-full bg-transparent border border-[var(--cl-hairline-strong)] flex items-center gap-1.5 hover:bg-[var(--cl-panel)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cl-ink)]/30 transition-colors text-[var(--cl-muted)] hover:text-[var(--cl-ink)] text-xs font-medium"
+            className="shrink-0 h-7 px-3 rounded-full bg-transparent border border-[var(--cl-hairline-strong)] flex items-center gap-1.5 hover:bg-[var(--cl-panel)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cl-ink)]/30 transition-colors text-[var(--cl-muted)] hover:text-[var(--cl-ink)] text-xs"
           >
             Browse all cards instead
           </button>
@@ -197,22 +214,50 @@ export default function CardCarousel({
 
       {/* Auto-margins center the whole group vertically when it fits, and cleanly
           top-align + scroll (never clip) when the viewport is too short. */}
-      <div className="w-full flex flex-col items-center my-auto">
+      <div className="w-full flex flex-col items-center">
+      {!matchMode && (
+        <div className="relative z-40 mb-6 flex w-full flex-col items-center gap-3 md:hidden">
+          <div className="w-full px-4">
+            <AISearchBar
+              compact
+              onQueryChange={(q) => { if (q.trim()) setStarted(true); }}
+              onFiltersParsed={setActiveFilters}
+              leftSlot={
+                <div className="relative flex items-center">
+                  <select
+                    value={providerFilter}
+                    onChange={(e) => setProviderFilter(e.target.value)}
+                    aria-label="Filter by card provider"
+                    className="appearance-none bg-transparent text-[12px] text-[var(--cl-ink)] pl-1 pr-5 py-0.5 focus:outline-none cursor-pointer max-w-[7.5rem] truncate"
+                  >
+                    <option value="all">All providers</option>
+                    {providers.map((p) => (
+                      <option key={p} value={p}>{providerLabel(p)}</option>
+                    ))}
+                  </select>
+                  <ChevronDown className="w-3.5 h-3.5 absolute right-0 pointer-events-none text-[var(--cl-muted)]" />
+                </div>
+              }
+            />
+          </div>
+          <BubbleFilters activeFilters={activeFilters} onFiltersChange={setActiveFilters} />
+        </div>
+      )}
       {activeCard ? (
       <>
       {/* Centered stage: caps its width on large monitors and scales fluidly so
           it fits every desktop height. The whole section is vertically centered
           and grows to scroll only on very short screens (never clips). */}
-      <div className="w-full flex flex-col gap-[clamp(1rem,3vh,3rem)] max-w-[105rem] mx-auto">
+      <div className="w-full flex flex-col gap-8 max-w-[104rem] mx-auto md:gap-[clamp(1.25rem,3.2vh,3.35rem)]">
       {/* Upper: carousel (left) + analysis (right). Fixed (fluid) height on
           desktop so the card sits at the same spot regardless of how tall the
           active card's analysis panel is — keeps positions stable across cards. */}
-      <div className="relative z-10 w-full px-[clamp(1rem,3vw,3rem)] grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-[clamp(3rem,6vw,7rem)] items-center lg:h-[clamp(300px,37vh,420px)]">
+      <div className="relative z-10 w-full px-4 grid grid-cols-1 lg:grid-cols-[1.12fr_1.08fr] gap-7 md:px-[clamp(1.25rem,3vw,3.5rem)] lg:gap-[clamp(2.75rem,4.2vw,4.75rem)] items-center lg:h-[clamp(330px,38vh,430px)]">
         {/* Left: carousel (edges fade into the page bg) with the controls
             sitting directly below the main card. */}
         <div className="flex flex-col items-center">
-          <div className="relative w-full h-[clamp(210px,27vh,340px)] flex items-center justify-center perspective-[1200px] overflow-hidden [mask-image:linear-gradient(to_right,transparent,#000_14%,#000_86%,transparent)]">
-          <div className="relative w-full h-full flex justify-center items-center transform-style-3d">
+          <div className="cards-dot-stage relative w-full h-[250px] md:h-[clamp(280px,34vh,400px)] flex items-center justify-center [perspective:1400px] overflow-hidden [mask-image:radial-gradient(ellipse_at_center,#000_0%,#000_56%,rgba(0,0,0,0.62)_70%,transparent_90%)]">
+          <div className="relative w-full h-full flex justify-center items-center [transform-style:preserve-3d]">
           <AnimatePresence initial={false}>
             {cards.map((card, index) => {
               // Calculate circular offset
@@ -221,9 +266,9 @@ export default function CardCarousel({
               if (offset > Math.floor(total / 2)) offset -= total;
               if (offset < -Math.floor(total / 2)) offset += total;
 
-              // Center card plus two on each side: five cards fill the
-              // horizontal space that used to sit empty.
-              const isVisible = Math.abs(offset) <= 2;
+              // Product-shot composition: one hero card, one softened card on
+              // either side. Extra cards stay out of view until navigated to.
+              const isVisible = Math.abs(offset) <= 1;
               if (!isVisible) return null;
 
               const isCenter = offset === 0;
@@ -234,12 +279,17 @@ export default function CardCarousel({
                   key={card.id}
                   initial={false}
                   animate={{
-                    x: `calc(${offset * 92}% + ${offset * (window.innerWidth < 768 ? 14 : 52)}px)`,
-                    scale: isCenter ? 1 : depth === 1 ? 0.85 : 0.72,
-                    rotateY: reducedMotion ? 0 : offset * -13,
-                    z: isCenter ? 50 : depth === 1 ? 0 : -40,
-                    opacity: isCenter ? 1 : depth === 1 ? 0.45 : 0.22,
-                    filter: `blur(${isCenter ? 0 : depth === 1 ? 3 : 6}px)`,
+                    x: isCenter
+                      ? -8
+                      : `calc(${offset * 104}% + ${offset * (window.innerWidth < 768 ? 16 : 68)}px)`,
+                    y: isCenter ? -2 : 8,
+                    scale: isCenter ? 1.06 : 0.68,
+                    rotateY: reducedMotion ? 0 : isCenter ? -16 : offset * -7,
+                    rotateX: reducedMotion ? 0 : isCenter ? 2.4 : 0.8,
+                    rotateZ: reducedMotion ? 0 : isCenter ? 1.2 : offset * -2,
+                    z: isCenter ? 130 : -170,
+                    opacity: isCenter ? 1 : 0.42,
+                    filter: `blur(${isCenter ? 0 : 6}px) saturate(${isCenter ? 1 : 0.74}) brightness(${isCenter ? 1 : 1.16})`,
                   }}
                   transition={cardTransition}
                   className={`absolute origin-center will-change-transform ${isCenter ? 'z-20 cursor-default' : depth === 1 ? 'z-10 cursor-pointer' : 'z-0 cursor-pointer'}`}
@@ -255,23 +305,28 @@ export default function CardCarousel({
           </AnimatePresence>
           </div>
           </div>
+          <div className="mt-1 flex items-center justify-center gap-3 lg:hidden" aria-hidden="true">
+            <span className="h-2.5 w-2.5 rounded-full bg-[var(--cl-hairline-strong)]" />
+            <span className="h-2.5 w-2.5 rounded-full bg-black" />
+            <span className="h-2.5 w-2.5 rounded-full bg-[var(--cl-hairline-strong)]" />
+          </div>
           {/* Carousel controls, right below the main card: prev · watchlist ·
               visit · next. Labels reveal on hover. */}
-          <div className="shrink-0 -mt-2 flex items-center justify-center gap-3.5">
+          <div className="shrink-0 -mt-4 flex items-center justify-center gap-4">
             <button
               onClick={prevCard}
               aria-label="Previous card"
-              className="p-3 rounded-full bg-[var(--cl-bg)] border border-[var(--cl-hairline-strong)] shadow-sm hover:bg-[var(--cl-panel)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cl-ink)]/30 transition-colors text-[var(--cl-muted)] hover:text-[var(--cl-ink)]"
+              className="h-10 w-10 rounded-full bg-[var(--cl-bg)] border border-[var(--cl-hairline-strong)] shadow-sm hover:bg-[var(--cl-panel)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cl-ink)]/30 transition-colors text-[var(--cl-muted)] hover:text-[var(--cl-ink)] flex items-center justify-center"
             >
-              <ChevronLeft className="w-7 h-7" />
+              <ChevronLeft className="w-5 h-5" />
             </button>
             <div className="group relative flex items-center justify-center">
               <button
                 onClick={() => setWatchlist((prev) => (prev.includes(activeCard.id) ? prev.filter((id) => id !== activeCard.id) : [...prev, activeCard.id]))}
                 aria-label={watchlist.includes(activeCard.id) ? `Remove ${activeCard.name} from watchlist` : `Add ${activeCard.name} to watchlist`}
-                className="p-3 rounded-full bg-[var(--cl-bg)] border border-[var(--cl-hairline-strong)] shadow-sm text-[var(--cl-muted)] hover:text-[var(--cl-ink)] hover:border-[var(--cl-ink)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cl-ink)]/30 transition-colors flex items-center justify-center"
+                className="h-10 w-10 rounded-full bg-[var(--cl-bg)] border border-[var(--cl-hairline-strong)] shadow-sm text-[var(--cl-muted)] hover:text-[var(--cl-ink)] hover:border-[var(--cl-ink)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cl-ink)]/30 transition-colors flex items-center justify-center"
               >
-                {watchlist.includes(activeCard.id) ? <X className="w-6 h-6" /> : <Plus className="w-6 h-6" />}
+                {watchlist.includes(activeCard.id) ? <X className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
               </button>
               <span className="pointer-events-none absolute top-full left-1/2 -translate-x-1/2 mt-2 whitespace-nowrap text-[9px] font-semibold uppercase tracking-wider text-[var(--cl-muted)] opacity-0 group-hover:opacity-100 transition-opacity duration-150">{watchlist.includes(activeCard.id) ? 'Saved' : 'Watchlist'}</span>
             </div>
@@ -282,13 +337,13 @@ export default function CardCarousel({
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label={`Visit ${activeCard.name} on the issuer's site`}
-                  className="p-3 rounded-full bg-[var(--cl-pill)] text-[var(--cl-pill-ink)] shadow-sm hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cl-ink)]/40 transition-opacity flex items-center justify-center"
+                  className="h-10 w-10 rounded-full bg-[var(--cl-pill)] text-[var(--cl-pill-ink)] shadow-sm hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cl-ink)]/40 transition-opacity flex items-center justify-center"
                 >
-                  <ArrowUpRight className="w-6 h-6" />
+                  <ArrowUpRight className="w-5 h-5" />
                 </a>
               ) : (
-                <span aria-hidden="true" title="Application link unavailable" className="p-3 rounded-full bg-[var(--cl-pill)]/30 text-[var(--cl-pill-ink)]/50 flex items-center justify-center cursor-not-allowed">
-                  <ArrowUpRight className="w-6 h-6" />
+                <span aria-hidden="true" title="Application link unavailable" className="h-10 w-10 rounded-full bg-[var(--cl-pill)]/30 text-[var(--cl-pill-ink)]/50 flex items-center justify-center cursor-not-allowed">
+                  <ArrowUpRight className="w-5 h-5" />
                 </span>
               )}
               <span className="pointer-events-none absolute top-full left-1/2 -translate-x-1/2 mt-2 whitespace-nowrap text-[9px] font-semibold uppercase tracking-wider text-[var(--cl-gold)] opacity-0 group-hover:opacity-100 transition-opacity duration-150">Visit</span>
@@ -296,21 +351,23 @@ export default function CardCarousel({
             <button
               onClick={nextCard}
               aria-label="Next card"
-              className="p-3 rounded-full bg-[var(--cl-bg)] border border-[var(--cl-hairline-strong)] shadow-sm hover:bg-[var(--cl-panel)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cl-ink)]/30 transition-colors text-[var(--cl-muted)] hover:text-[var(--cl-ink)]"
+              className="h-10 w-10 rounded-full bg-[var(--cl-bg)] border border-[var(--cl-hairline-strong)] shadow-sm hover:bg-[var(--cl-panel)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cl-ink)]/30 transition-colors text-[var(--cl-muted)] hover:text-[var(--cl-ink)] flex items-center justify-center"
             >
-              <ChevronRight className="w-7 h-7" />
+              <ChevronRight className="w-5 h-5" />
             </button>
           </div>
         </div>
 
         {/* Right: compact analysis */}
-        <CardInsightsPanel card={activeCard} whyBullets={activeWhy} />
+        <div className="hidden lg:block">
+          <CardInsightsPanel card={activeCard} whyBullets={activeWhy} />
+        </div>
       </div>
 
       {/* Lower: card identity + headline facts. Fixed (fluid) height, content
           top-aligned, so the title starts at a constant vertical point and the
           search bar below always begins at the same place across cards. */}
-      <div aria-live="polite" className="relative z-20 w-full flex flex-col items-center gap-[clamp(0.75rem,2vh,1.25rem)] px-4 lg:min-h-[clamp(330px,37vh,430px)]">
+      <div aria-live="polite" className="relative z-20 w-full flex flex-col items-center gap-[clamp(1.5rem,3vh,2.35rem)] px-4">
         <AnimatePresence mode="wait">
           <motion.div
             key={activeCard.id}
@@ -322,13 +379,13 @@ export default function CardCarousel({
           >
             {/* Card name, centered. Watchlist / Visit actions live in the
                 carousel control row beneath the card. */}
-            <div className="w-full flex justify-center px-2 mt-[clamp(1rem,5vh,3rem)]">
+            <div className="w-full flex justify-center px-2">
               <div className="text-center">
-                <p className="font-display text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--cl-gold)] mb-1">{activeCard.issuer}</p>
-                <h1 className="font-display font-semibold text-[clamp(1.125rem,1.7vw,1.75rem)] leading-[1.1] text-[var(--cl-ink)] text-balance">{activeCard.name}</h1>
+                <p className="font-display text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--cl-gold)] mb-2">{activeCard.issuer}</p>
+                <h1 className="font-display font-semibold text-[clamp(1.45rem,1.78vw,1.88rem)] leading-[1.07] text-black text-balance">{activeCard.name}</h1>
                 {ranked && (
-                  <p className="mt-1 text-sm font-medium text-[var(--cl-muted)]">
-                    <span className="text-[var(--cl-gold)] font-semibold">#{currentIndex + 1}</span> {rankLabel}
+                  <p className="mt-3 text-sm text-[var(--cl-muted)]">
+                    <span className="text-[var(--cl-gold)]">#{currentIndex + 1}</span> {rankLabel}
                   </p>
                 )}
               </div>
@@ -345,6 +402,10 @@ export default function CardCarousel({
             ) : null}
           </motion.div>
         </AnimatePresence>
+
+        <div className="w-full lg:hidden">
+          <CardInsightsPanel card={activeCard} whyBullets={activeWhy} />
+        </div>
 
         {/* Headline facts: Annual Fee · Rewards · Sign-up Bonus */}
         <CardFacts card={activeCard} />
@@ -399,9 +460,10 @@ export default function CardCarousel({
           Small top gap (less padding before the search bar); the section's
           pb-8 plus the natural bottom slack open the space below it. */}
       {!matchMode && (
-        <div className="relative z-20 w-full shrink-0 flex flex-col items-center gap-[clamp(0.75rem,2vh,1.5rem)] mt-[clamp(0.75rem,3vh,2.5rem)]">
+        <div className="cards-bottom-dock z-40 mt-8 hidden w-full flex-col items-center gap-3 md:absolute md:left-0 md:right-0 md:mt-0 md:flex">
           <div className="w-full px-4">
             <AISearchBar
+              compact
               onQueryChange={(q) => { if (q.trim()) setStarted(true); }}
               onFiltersParsed={setActiveFilters}
               leftSlot={
@@ -410,14 +472,14 @@ export default function CardCarousel({
                     value={providerFilter}
                     onChange={(e) => setProviderFilter(e.target.value)}
                     aria-label="Filter by card provider"
-                    className="appearance-none bg-transparent text-sm font-medium text-[var(--cl-ink)] pl-1 pr-6 py-1 focus:outline-none cursor-pointer max-w-[9rem] truncate"
+                    className="appearance-none bg-transparent text-[12px] text-[var(--cl-ink)] pl-1 pr-5 py-0.5 focus:outline-none cursor-pointer max-w-[8rem] truncate"
                   >
                     <option value="all">All providers</option>
                     {providers.map((p) => (
                       <option key={p} value={p}>{providerLabel(p)}</option>
                     ))}
                   </select>
-                  <ChevronDown className="w-4 h-4 absolute right-0 pointer-events-none text-[var(--cl-muted)]" />
+                  <ChevronDown className="w-3.5 h-3.5 absolute right-0 pointer-events-none text-[var(--cl-muted)]" />
                 </div>
               }
             />

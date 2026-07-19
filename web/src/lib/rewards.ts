@@ -50,6 +50,60 @@ export function leadWithNumber(text: string): string {
   return text.slice(m.index).trim();
 }
 
+function concisePerk(text: string): string {
+  let s = tidy(leadWithNumber(text));
+  let shortened = false;
+  s = s
+    .replace(/^the\s+/i, '')
+    .replace(/^cardmembers?\s+(?:can\s+)?(?:earn|receive|get)\s+/i, '')
+    .replace(/^you\s+(?:can\s+)?(?:earn|receive|get)\s+/i, '')
+    .replace(/^this card\s+(?:offers|provides|features|earns)\s+/i, '')
+    .replace(/^the card\s+(?:offers|provides|features|earns)\s+/i, '')
+    .replace(/^earn\s+(?:a\s+)?/i, '')
+    .replace(/^receive\s+(?:a\s+)?/i, '')
+    .replace(/^get\s+(?:a\s+)?/i, '')
+    .replace(/^offers?\s+(?:a\s+)?/i, '')
+    .replace(/^provides?\s+(?:a\s+)?/i, '')
+    .replace(/\s+from account opening\b/i, '')
+    .replace(/\s+after account opening\b/i, '')
+    .replace(/\s+outside of REI\b/i, '')
+    .replace(/\s+when you are approved(?: for the card)?\b/i, ' after approval')
+    .replace(/\s+on approval\b/i, ' after approval')
+    .replace(/\s+of your credit card application\b/i, '')
+    .replace(/\s+of your application\b/i, '')
+    .replace(/\s+instantly loaded into your Amazon account'?s Gift Card Balance\b/i, '')
+    .replace(/\s+on your new Card\b/i, '')
+    .replace(/\s+of Card Membership\b/i, '')
+    .replace(/\s+of Card\b/i, '')
+    .replace(/\s+in purchases\b/i, '')
+    .replace(/after you spend\s+(\$[\d,]+)/i, 'after $1 spend')
+    .replace(/after spending\s+(\$[\d,]+)/i, 'after $1 spend')
+    .replace(/\s+/g, ' ')
+    .replace(/[.;,]+$/, '')
+    .trim();
+
+  const sentenceEnd = s.search(/[.!?]\s/);
+  if (sentenceEnd > 0) {
+    s = s.slice(0, sentenceEnd).trim();
+    shortened = true;
+  }
+
+  const clause = s.split(/\s+(?:,?\s+and\s+|,?\s+plus\s+|;|—|-)\s+/)[0]?.trim();
+  if (clause && clause !== s && /\$?\d|%|x\b|points?|miles?|gift card|credit|lounge|fee|cash back/i.test(clause)) {
+    s = clause;
+    shortened = true;
+  }
+
+  const words = s.split(/\s+/).filter(Boolean);
+  if (words.length > 15) {
+    s = words.slice(0, 15).join(' ');
+    s = s.replace(/\b(?:and|or|with|for|on|in|of|to|the|a|an|within|after)$/i, '').trim();
+    shortened = true;
+  }
+  s = s.replace(/[.;,]+$/, '').trim();
+  return shortened ? `${s}...` : s;
+}
+
 /**
  * A card's rewards as display bullets — the hard rule is that the rewards
  * section is always a bulleted list and every bullet leads with its rate
@@ -73,19 +127,18 @@ export function cardRewardBullets(facts: {
 }
 
 /**
- * The Top Perk cell: when the crawler's top perk is just the sign-up bonus
- * restated, say "The sign-up bonus" instead of repeating the whole clause;
- * a distinct perk (a particular reward, a credit, lounge access) shows as
- * itself, number first.
+ * The Top Perk cell: show the actual benefit in a reduced, number-first form.
+ * If the crawler's top perk is just the sign-up bonus restated, use the bonus
+ * clause itself instead of a generic "The sign-up bonus" label.
  */
 export function topPerkDisplay(facts: { topPerk: string; bonus: string }): string {
   const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
   const perk = norm(facts.topPerk);
   const bonus = norm(facts.bonus);
   if (perk && bonus && (perk === bonus || perk.includes(bonus) || bonus.includes(perk))) {
-    return 'The sign-up bonus';
+    return concisePerk(facts.bonus);
   }
-  return leadWithNumber(facts.topPerk);
+  return concisePerk(facts.topPerk);
 }
 
 /**

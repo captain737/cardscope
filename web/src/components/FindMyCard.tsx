@@ -36,7 +36,6 @@ const SPEND_CATS = [
   { key: 'dining', label: 'Dining & takeout' },
   { key: 'groceries', label: 'Groceries' },
   { key: 'gas', label: 'Gas & transit' },
-  { key: 'travel', label: 'Travel' },
   { key: 'general', label: 'Everything else' },
 ];
 const SPEND_MAX = 2000; // slider ceiling per category ($/mo)
@@ -44,7 +43,7 @@ const SPEND_MAX = 2000; // slider ceiling per category ($/mo)
 const BLANK: Answers = {
   firstName: '', lastName: '', email: '',
   ownedCards: [], maxFee: 95, // PRD default for a general cash-back user
-  spend: { dining: 300, groceries: 400, gas: 150, travel: 150, general: 800 },
+  spend: { dining: 300, groceries: 400, gas: 150, general: 800 },
 };
 
 function deriveFilters(a: Answers): string[] {
@@ -61,13 +60,10 @@ function deriveFilters(a: Answers): string[] {
   // filter) so the default wallet — mostly everyday spending — doesn't
   // spuriously hand a specific category like groceries the top spot.
   const spendGoal: Record<string, string> = { dining: 'dining', groceries: 'groceries', gas: 'gas' };
-  const cats = ['dining', 'groceries', 'gas', 'travel', 'general'] as const;
+  const cats = ['dining', 'groceries', 'gas', 'general'] as const;
   const top = cats.map((k) => [k, a.spend[k] ?? 0] as const).sort((x, y) => y[1] - x[1])[0];
   if (top && top[1] >= 400) {
     if (spendGoal[top[0]]) ids.push(spendGoal[top[0]]);
-    // Heavy travel spend suggests a points card — but never override an
-    // explicit cash-back preference (the currencies are strict categories).
-    else if (top[0] === 'travel' && a.rewards !== 'cashback') ids.push('rewards');
   }
   return normalizeFilters([...new Set(ids)]);
 }
@@ -188,7 +184,7 @@ export default function FindMyCard({ open, onClose, onComplete }: FindMyCardProp
     <AnimatePresence>
       {open && (
         <motion.div
-          className="compare-light fixed inset-0 z-50 overflow-y-auto bg-[var(--cl-bg)]/90 backdrop-blur-2xl"
+          className="compare-light fixed inset-0 z-50 overflow-y-auto bg-[var(--cl-bg)]"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -544,12 +540,12 @@ function SpendStep({ answers, set }: StepProps) {
   return (
     <div className="w-full flex flex-col items-center">
       <Heading title="Roughly, how much do you spend each month?" hint="Drag to set your typical monthly spend. This is how we rank cards for your wallet." />
-      <div className="flex flex-col w-full max-w-md gap-1">
+      <div className="grid grid-cols-1 sm:grid-cols-2 w-full max-w-3xl gap-x-8 gap-y-1">
         {SPEND_CATS.map(cat => {
           const val = answers.spend[cat.key] ?? 0;
           const isMax = val >= SPEND_MAX;
           return (
-            <div key={cat.key} className="py-3.5 border-b border-[var(--cl-hairline)] last:border-b-0">
+            <div key={cat.key} className="py-3.5 border-b border-[var(--cl-hairline)]">
               <div className="flex items-baseline justify-between mb-2.5">
                 <span className="font-medium text-[var(--cl-ink)] text-[15px]">{cat.label}</span>
                 <span className="font-display font-semibold text-[var(--cl-ink)] tabular-nums">${val}{isMax ? '+' : ''}<span className="text-[var(--cl-muted)] text-xs font-normal">/mo</span></span>

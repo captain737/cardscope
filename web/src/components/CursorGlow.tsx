@@ -75,7 +75,7 @@ export default function CursorGlow() {
       className="pointer-events-none fixed left-0 top-0 z-[1] h-[340px] w-[340px] rounded-full opacity-0 transition-opacity duration-500"
       style={{
         background:
-          'radial-gradient(circle, color-mix(in oklch, var(--cl-gold) 26%, transparent), transparent 62%)',
+          'radial-gradient(circle, color-mix(in oklch, var(--cl-gold) 9%, transparent), transparent 64%)',
       }}
     />
   );

@@ -56,7 +56,7 @@ export default function CardVisual({ card, variant = 'default' }: CardVisualProp
             // gradient face rather than showing a blurry/undersized image.
             if (w && h && (w <= h || w / h < 1.3 || w / h > 1.8 || w < 200)) setArtFailed(true);
           }}
-          className="w-full h-full object-contain"
+          className={`w-full h-full ${variant === 'fill' ? 'object-cover' : 'object-contain'} [filter:saturate(1.04)_contrast(1.03)]`}
         />
       </div>
     );
@@ -65,7 +65,7 @@ export default function CardVisual({ card, variant = 'default' }: CardVisualProp
   // Fallback: the stylized gradient face, for cards the crawler hasn't
   // found art for (and all mock data).
   return (
-    <div className={`relative ${size} rounded-[1.25rem] md:rounded-[1.5rem] overflow-hidden shadow-2xl p-5 md:p-6 flex flex-col justify-between ${card.gradient}`}>
+    <div className={`warm-card-face relative ${size} rounded-[1.25rem] md:rounded-[1.5rem] overflow-hidden p-5 md:p-6 flex flex-col justify-between`}>
       {/* Texture / Noise overlay */}
       <div
         className="absolute inset-0 opacity-20 mix-blend-overlay"
@@ -73,30 +73,30 @@ export default function CardVisual({ card, variant = 'default' }: CardVisualProp
       />
 
       {/* Subtle radial glow */}
-      <div className="absolute -top-24 -right-24 w-48 h-48 bg-white/20 blur-3xl rounded-full" />
-      <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-black/40 blur-3xl rounded-full" />
+      <div className="absolute -top-24 -right-24 w-48 h-48 bg-white/70 blur-3xl rounded-full" />
+      <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-neutral-300/45 blur-3xl rounded-full" />
 
       {/* Top row: Issuer and Contactless icon */}
       <div className="relative flex justify-between items-start z-10">
-        <span className="font-display font-bold tracking-widest text-ink/90 text-sm md:text-base uppercase">{card.issuer}</span>
-        <Wifi className="w-6 h-6 text-ink/70 rotate-90" />
+        <span className="font-display font-bold tracking-widest text-black/75 text-sm md:text-base uppercase">{card.issuer}</span>
+        <Wifi className="w-6 h-6 text-neutral-700/70 rotate-90" />
       </div>
 
       {/* Middle row: Chip */}
       <div className="relative z-10">
-        <div className="w-10 h-12 md:w-12 md:h-14 bg-gradient-to-br from-primary/50 to-primary-deep/30 rounded-md border border-primary/40 backdrop-blur-sm shadow-inner flex flex-col justify-around p-1">
-          <div className="w-full h-[1px] bg-primary/40"></div>
-          <div className="w-full h-[1px] bg-primary/40"></div>
-          <div className="w-full h-[1px] bg-primary/40"></div>
+        <div className="w-10 h-12 md:w-12 md:h-14 bg-gradient-to-br from-white via-neutral-100 to-neutral-300 rounded-md border border-neutral-300/55 backdrop-blur-sm shadow-inner flex flex-col justify-around p-1">
+          <div className="w-full h-[1px] bg-neutral-500/30"></div>
+          <div className="w-full h-[1px] bg-neutral-500/30"></div>
+          <div className="w-full h-[1px] bg-neutral-500/30"></div>
         </div>
       </div>
 
       {/* Bottom row: Name and numbers */}
       <div className="relative z-10 mt-auto">
-        <div className="text-ink/60 font-mono tracking-[0.3em] mb-2 md:mb-4 text-xs md:text-sm">
+        <div className="text-black/45 font-mono tracking-[0.3em] mb-2 md:mb-4 text-xs md:text-sm">
           •••• •••• •••• {card.last4}
         </div>
-        <div className="text-ink font-display font-semibold text-xl md:text-2xl leading-none drop-shadow-sm">
+        <div className="text-black font-display font-semibold text-xl md:text-2xl leading-none">
           {card.name}
         </div>
       </div>
